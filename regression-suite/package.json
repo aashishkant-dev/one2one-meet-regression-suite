@@ -1,0 +1,19 @@
+{
+  "name": "one2one-regression-suite",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Automated regression suite for One2One Meet, mapped to the 216-case master test register.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "test:tracked": "node scripts/run-tracked.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0",
+    "dotenv": "^16.4.5"
+  }
+}
