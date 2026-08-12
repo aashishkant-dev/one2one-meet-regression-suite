@@ -14,6 +14,7 @@ export class OrganizerNav {
     await this.page.locator('#username').fill(username);
     await this.page.locator('#password').fill(password);
     await this.page.getByRole('button', { name: /log ?in/i }).click();
+    await this.acceptTermsGateIfPresent();
     await expect(this.page).toHaveURL(/\/organizer\/dashboard/, { timeout: 15_000 });
   }
 
@@ -22,7 +23,28 @@ export class OrganizerNav {
     await this.page.locator('#username').fill(username);
     await this.page.locator('#password').fill(password);
     await this.page.getByRole('button', { name: /log ?in/i }).click();
+    await this.acceptTermsGateIfPresent();
     await expect(this.page).toHaveURL(/\/super-admin\/dashboard/, { timeout: 15_000 });
+  }
+
+  /**
+   * New gotcha confirmed live 2026-08-12: on some logins the app inserts a 5-step
+   * re-acceptance gate at /auth/terms-of-service (tos, security_whitepaper, dpa, sla,
+   * eula) before landing on the real dashboard - one checkbox + Continue click per step.
+   * Not present on every login (server-side "has this version been accepted" check), so
+   * this is a no-op when the gate doesn't appear rather than a hard requirement.
+   */
+  private async acceptTermsGateIfPresent() {
+    let guard = 0;
+    while (this.page.url().includes('/auth/terms-of-service') && guard < 8) {
+      guard++;
+      const checkbox = this.page.getByRole('checkbox');
+      if (await checkbox.count()) {
+        await checkbox.first().check();
+      }
+      await this.page.getByRole('button', { name: /continue/i }).click();
+      await this.page.waitForTimeout(1000);
+    }
   }
 
   async goToSidebar(label: string) {
@@ -70,5 +92,20 @@ export class OrganizerNav {
   /** Top-bar "organizer can be a delegate" toggle, aria-label="Set delegate active". Requires a non-DRAFT event selected. */
   async toggleDelegateMode() {
     await this.page.getByRole('button', { name: 'Set delegate active' }).click();
+  }
+
+  /**
+   * Works for both organizer and super-admin - same aria-label="User profile" dialog
+   * trigger and Submit Feedback / Change Password / Logout actions on both roles
+   * (confirmed live 2026-08-11, see KNOWLEDGE.md / TC-LS-004, TC-SA-003).
+   */
+  async openProfileDialog() {
+    await this.page.locator('[aria-label="User profile"]').click();
+  }
+
+  async logout() {
+    await this.openProfileDialog();
+    await this.page.getByText(/^logout$/i).click();
+    await expect(this.page).toHaveURL(/\/auth\/login/, { timeout: 15_000 });
   }
 }

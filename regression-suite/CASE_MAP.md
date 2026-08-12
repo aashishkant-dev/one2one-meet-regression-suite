@@ -31,7 +31,76 @@ browser and use its search box with the TC-ID.
 | Meeting Request Lifecycle | 0 / 8 | — not yet automated | |
 | Notifications & UX Consistency | 0 / 6 | — not yet automated | |
 | Sponsors - Request Handling | 0 / 4 | — not yet automated | |
-| **Grand total** | **33 / 216** | | |
+| Authentication - Gap Coverage | 7 / 7 | `tests/core/authentication.spec.ts` | TC-LS-014a, TC-LS-014b, TC-SA-001, TC-SA-N01, TC-LS-009, TC-LS-013, TC-LS-012+TC-LS-004 |
+| **Grand total** | **40 / 223** | | |
+
+**Authentication - Gap Coverage is not part of the original 216-case register** — these 7 TC-IDs
+were found by live-surfing staging on 2026-08-11 (see `recon/2026-08-11-auth-and-module-sweep/`)
+and don't exist in `../../One2One_Meet_TestCases_Merged.xlsx`. Full detail, plus 7 more cases
+not yet automated here (TC-LS-002/010/011, TC-SA-003/004/005), lives in the "Login & Session -
+Gaps" and "Super Admin - Gaps" sheets of `../../One2One_Meet_TestCases_Concurrency_and_Gaps.xlsx`.
+
+## 2026-08-12 gap sweep (delegate-side dashboard modules)
+
+Also not part of the original 216-case register. Full case detail (steps/data/expected result,
+including cases NOT automated here) lives in the new
+`../../One2One_Meet_TestCases_NewGaps_2026-08-12.xlsx`. Recon transcripts: `recon/2026-08-12-gap-sweep/`.
+
+| Module | Automated / Authored | Spec file | TC-IDs covered |
+|---|---|---|---|
+| EO-Delegate Toggle | 3 / 11 | `tests/core/eo-delegate-toggle.spec.ts` | TC-EOT-002, TC-EOT-003, TC-EOT-004 |
+| Dashboard Search Bar (organizer) | 3 / 15 | `tests/core/dashboard-search.spec.ts` | TC-SRCH-002, TC-SRCH-006, TC-SRCH-009 |
+| Delegate Directory Search | 4 / 6 | `tests/core/delegate-directory-search.spec.ts` | TC-DDIR-001, TC-DDIR-003, TC-DDIR-004, TC-DDIR-005 |
+| Delegate Meeting Reports | 3 / 8 | `tests/core/delegate-meetings-report.spec.ts` | TC-DRPT-001, TC-DRPT-002, TC-DRPT-003 |
+| Delegate Feedback (Gaps) | 2 / 8 | `tests/core/delegate-feedback.spec.ts` | TC-DFB-001, TC-DFB-007 |
+| Delegate Dashboard Search | 0 / 7 | — not yet automated | |
+| Delegate Registration Link | 0 / 4 | — **confirmed not applicable**, see below | |
+| **2026-08-12 sweep total** | **15 / 59** | | |
+
+Real findings from this pass, not assumptions:
+- **Fixed a real bug in the shared suite**: staging now inserts a 5-step Terms-of-Service
+  re-acceptance gate (`/auth/terms-of-service`: tos, security_whitepaper, dpa, sla, eula) after
+  some logins. This was silently breaking `TC-LS-013` and `TC-LS-012+TC-LS-004` in
+  `authentication.spec.ts`. Fixed in `OrganizerNav.login()`/`loginSuperAdmin()` - both now walk
+  the gate if present. All 7 authentication tests pass again.
+- **Recovered the "lost" Booking Test Event delegate passwords** (`.env`, gitignored) via
+  Organizer > Delegates > Resend Link for both `BTE-BDC-alex` and `BTE-BEC-blake`, then read the
+  fresh credentials back from Mailpit. `bookingDelegateAPage`/`bookingDelegateBPage` fixtures work again.
+- **Dashboard search bar is not decorative** - `GET /api/organizer/search?search_term=...` fires
+  live on every keystroke (no Enter needed) and returns relevance-ranked, highlighted, per-table
+  grouped results (events/announcements/delegates/...). The dropdown renders correctly; it's a
+  plain `<div>` with a "View all results" footer link, not an ARIA `listbox`/`menu`.
+- **EO-Delegate Toggle**: first-ever toggle for an event opens a 2-step "Create Delegate Account"
+  wizard (Company Information -> Participant Information, both pre-filled from the org's own
+  profile); once that delegate profile exists, later toggles switch directly to
+  `/delegate/<slug>/dashboard`. Toggling off uses a *different* aria-label
+  (`Set delegate inactive`) than toggling on (`Set delegate active`). Organizer-only routes are
+  correctly route-guarded while in Delegate mode (redirect back to the delegate dashboard).
+- **"Meeting Reports" is not a separate sidebar item** - it's reached via a link on the
+  **Meetings** page (`/delegate/<slug>/meeting-report`), and renders one row per meeting
+  (partner, date/time, country, duration, venue/table) plus an "Export All Meetings" download,
+  not aggregate counts.
+- **Delegate directory search requires "Apply Filters"** - typing alone does not live-filter or
+  fire any request; you must click Apply Filters. Confirmed both the empty-state ("No delegates
+  found") and a working partial-name match through that button.
+- **No delegate-side Registration Links feature exists.** The delegate dashboard's full nav is
+  exactly: My Profile, Agenda, Meetings, Delegates, Feedbacks. The 4 cases speculatively
+  authored for this in `One2One_Meet_TestCases_NewGaps_2026-08-12.xlsx` are marked
+  "N/A - feature not present" rather than executed.
+
+**Full-suite health check (2026-08-12, after the above):** all 15 new tests pass, plus the same
+13 pre-existing tests that were already green (7 `authentication.spec.ts` + TC-DL-001/N02/N03 +
+TC-RP-001 + TC-SC-004 + TC-AG-003) = 28/55 passed. The other **26 pre-existing tests now fail**,
+scattered across 13 spec files (access-types, announcements-feedback, delegate-management,
+event-management, live-meetings, manual-booking, meeting-booking, registration-links, reports,
+sponsor-categories, sponsors, table-configuration, timeslots-agenda) with 13 unrelated root
+causes - e.g. Access Types' button is now labelled "Add Access Type" not "Add New";
+`DelegatesPage.pickReactSelect`'s Access Type locator now matches 2 elements (strict-mode
+violation). This is real UI/copy drift in the app since these were last verified 2026-08-09, not
+something a login-flow fix could cause - confirmed by the failures having 13 independent error
+shapes instead of one common one. **Not fixed in this pass** (out of scope - it's a
+page-object-by-page-object maintenance job, not a quick patch); flagging here so the next person
+touching this suite isn't surprised.
 
 ## How to extend coverage
 

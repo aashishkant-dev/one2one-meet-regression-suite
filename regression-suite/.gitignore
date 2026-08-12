@@ -5,3 +5,10 @@ playwright/.cache/
 regression-log/last-run.json
 .env
 *.log
+
+# Throwaway recon scripts - 2026-08-11 batch has staging Organizer/Super Admin
+# credentials hardcoded in plaintext (see its own README). Never publish these.
+# 2026-08-12 batch is credential-clean (reads .env) but its out/ screenshots are
+# just local debug artifacts, same tier as test-results/.
+recon/2026-08-11-auth-and-module-sweep/
+recon/**/out/
