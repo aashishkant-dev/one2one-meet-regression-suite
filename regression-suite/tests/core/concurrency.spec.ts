@@ -6,6 +6,7 @@ import { OrganizerNav } from '../support/pages/OrganizerNav';
 import { DelegatesPage } from '../support/pages/DelegatesPage';
 import { SponsorCategoriesPage } from '../support/pages/SponsorCategoriesPage';
 import { EventsPage } from '../support/pages/EventsPage';
+import { EODelegateTogglePage } from '../support/pages/EODelegateTogglePage';
 import { seededData } from '../support/fixtures/seeded-data';
 
 /**
@@ -304,6 +305,59 @@ test.describe('Concurrency - Race Conditions (Gap Coverage)', () => {
     // hard requirement: neither concurrent session should be left in a crashed/rejected state.
     const eitherSucceeded = resultA.status === 'fulfilled' || resultB.status === 'fulfilled';
     expect(eitherSucceeded).toBe(true);
+
+    await ctxA.close();
+    await ctxB.close();
+  });
+
+  test('TC-CR-001 double-click Accept on the same pending request from two open tabs of the same session', async ({ browser }) => {
+    test.info().annotations.push({ type: 'priority', description: 'High' });
+
+    // QA Automation (the organizer's own EO-Delegate profile) has a genuinely pending request
+    // from Alex Delta at 10:20-10:35 (sent in TC-CC-001) - two tabs of that same delegate
+    // session both click Accept on it at the same instant.
+    const ctxA = await browser.newContext();
+    const ctxB = await browser.newContext();
+    const pageA = await ctxA.newPage();
+    const pageB = await ctxB.newPage();
+
+    const navA = new OrganizerNav(pageA);
+    const navB = new OrganizerNav(pageB);
+    await navA.login(env.orgUsername, env.orgPassword);
+    await navB.login(env.orgUsername, env.orgPassword);
+    await navA.switchEventAndWaitFor(seededData.bookingTestEvent.name, /Booking Test Event/i);
+    await navB.switchEventAndWaitFor(seededData.bookingTestEvent.name, /Booking Test Event/i);
+
+    const toggleA = new EODelegateTogglePage(pageA);
+    const toggleB = new EODelegateTogglePage(pageB);
+    await toggleA.clickToggleOn();
+    await toggleB.clickToggleOn();
+    await expect(pageA).toHaveURL(/\/delegate\//, { timeout: 15_000 });
+    await expect(pageB).toHaveURL(/\/delegate\//, { timeout: 15_000 });
+
+    const meetingsA = new DelegateMeetingsPage(pageA);
+    const meetingsB = new DelegateMeetingsPage(pageB);
+    await meetingsA.goto();
+    await meetingsB.goto();
+
+    const SLOT = '10:20 TO 10:35';
+    const [resultA, resultB] = await Promise.allSettled([
+      meetingsA.acceptButtonForSlot(SLOT).click({ timeout: 10_000 }),
+      meetingsB.acceptButtonForSlot(SLOT).click({ timeout: 10_000 }),
+    ]);
+
+    await pageA.waitForTimeout(2000);
+    await pageA.reload();
+    await pageA.waitForTimeout(2000);
+    const stillPending = await meetingsA.acceptButtonForSlot(SLOT).count();
+
+    test.info().annotations.push({
+      type: 'observed-outcome',
+      description: `Tab A click: ${resultA.status}. Tab B click: ${resultB.status}. After both, Accept button still present for this slot (i.e. still shown as pending): ${stillPending > 0 ? 'yes - unexpected' : 'no - correctly resolved once'}.`,
+    });
+
+    // Double-accepting the same request must not leave it stuck showing as pending forever.
+    expect(stillPending).toBe(0);
 
     await ctxA.close();
     await ctxB.close();

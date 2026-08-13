@@ -66,6 +66,27 @@ export class DelegateMeetingsPage {
     return response;
   }
 
+  /**
+   * Pending-request Accept/Reject icon buttons on a slot card, title="Accept"/"Reject" (no
+   * visible text). Confirmed live 2026-08-13. Scoped to the smallest ancestor that contains
+   * exactly one Accept and one Reject button (searching outward level by level) rather than a
+   * fixed xpath depth - fixed depths (like bookButtonForSlot's ancestor::*[3]) turned out to
+   * vary between the "open slot" card and this "pending request" card.
+   */
+  private pendingRequestCard(timeLabel: string) {
+    return this.page.getByText(timeLabel).first().locator(
+      'xpath=ancestor::*[.//button[@title="Accept"] and count(.//button[@title="Accept"])=1][1]'
+    );
+  }
+
+  acceptButtonForSlot(timeLabel: string) {
+    return this.pendingRequestCard(timeLabel).getByRole('button', { name: 'Accept' });
+  }
+
+  rejectButtonForSlot(timeLabel: string) {
+    return this.pendingRequestCard(timeLabel).getByRole('button', { name: 'Reject' });
+  }
+
   dashboardCounter(label: 'Total TimeSlot' | 'Scheduled' | 'Available') {
     return this.page.getByText(label).locator('xpath=following-sibling::*[1]');
   }
