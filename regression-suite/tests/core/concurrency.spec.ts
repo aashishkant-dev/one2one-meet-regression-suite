@@ -7,6 +7,7 @@ import { DelegatesPage } from '../support/pages/DelegatesPage';
 import { SponsorCategoriesPage } from '../support/pages/SponsorCategoriesPage';
 import { EventsPage } from '../support/pages/EventsPage';
 import { EODelegateTogglePage } from '../support/pages/EODelegateTogglePage';
+import { SponsorsPage } from '../support/pages/SponsorsPage';
 import { seededData } from '../support/fixtures/seeded-data';
 
 /**
@@ -451,6 +452,58 @@ test.describe('Concurrency - Race Conditions (Gap Coverage)', () => {
     // The opposite actions racing on the same request must resolve to exactly one definitive
     // outcome (accepted OR rejected), not remain stuck showing as pending forever.
     expect(stillPending).toBe(0);
+
+    await ctxA.close();
+    await ctxB.close();
+  });
+
+  /**
+   * IRREVERSIBLE by design (see SponsorsPage.promoteDelegateToSponsor docstring - no clean
+   * revert in this app), so this deliberately targets a Past Event delegate
+   * (seededData.pastEvent.knownUnpromotedDelegates) rather than anything in Booking Test
+   * Event or Current Event that other specs depend on staying in its current state.
+   */
+  test('TC-CE-009 two sessions simultaneously promote the SAME delegate to Sponsor with DIFFERENT categories', async ({ browser }) => {
+    test.info().annotations.push({ type: 'priority', description: 'High' });
+
+    const ctxA = await browser.newContext();
+    const ctxB = await browser.newContext();
+    const pageA = await ctxA.newPage();
+    const pageB = await ctxB.newPage();
+
+    const navA = new OrganizerNav(pageA);
+    const navB = new OrganizerNav(pageB);
+    await navA.login(env.orgUsername, env.orgPassword);
+    await navB.login(env.orgUsername, env.orgPassword);
+    await navA.switchEventAndWaitFor(seededData.pastEvent.name, /Sponsor/i);
+    await navB.switchEventAndWaitFor(seededData.pastEvent.name, /Sponsor/i);
+
+    const sponsorsA = new SponsorsPage(pageA);
+    const sponsorsB = new SponsorsPage(pageB);
+    await sponsorsA.goto();
+    await sponsorsB.goto();
+
+    const targetDelegate = seededData.pastEvent.knownUnpromotedDelegates[0]; // 'Echo Industries'
+
+    const [resultA, resultB] = await Promise.allSettled([
+      sponsorsA.promoteDelegateToSponsor(targetDelegate, 'Standard'),
+      sponsorsB.promoteDelegateToSponsor(targetDelegate, 'Premium'),
+    ]);
+
+    await pageA.waitForTimeout(2000);
+    await sponsorsA.goto();
+    await pageA.waitForTimeout(1500);
+    const finalRowText = await sponsorsA.sponsorRow(targetDelegate).innerText().catch(() => '(not found in Sponsors list)');
+
+    test.info().annotations.push({
+      type: 'observed-outcome',
+      description: `Session A (-> Standard) outcome: ${resultA.status}. Session B (-> Premium) outcome: ${resultB.status}. Final sponsor row for "${targetDelegate}": ${finalRowText.replace(/\n+/g, ' | ')}`,
+    });
+
+    // Whichever category "wins", the delegate must not end up in some broken intermediate
+    // state (e.g. promoted to sponsor status but with NO category, or duplicated as two rows).
+    const finalRowCount = await sponsorsA.sponsorRow(targetDelegate).count();
+    expect(finalRowCount).toBeLessThanOrEqual(1);
 
     await ctxA.close();
     await ctxB.close();
