@@ -13,6 +13,23 @@ export class DelegateAuthPage {
     await this.page.locator('#username').fill(username);
     await this.page.locator('#password').fill(password);
     await this.page.getByRole('button', { name: /log ?in/i }).click();
+    await this.acceptTermsGateIfPresent();
+  }
+
+  /**
+   * New gotcha confirmed live 2026-08-13: delegate logins can land on
+   * /auth/terms-of-service with a DIFFERENT layout than the organizer/super-admin gate
+   * (OrganizerNav.acceptTermsGateIfPresent) - one combined checkbox ("I have read and agree
+   * to all of the above documents...") covering all 6 docs (eula/tos/dpa/sla/privacy_policy/
+   * security_whitepaper tabs) plus a single Submit button, not one Continue click per tab.
+   */
+  private async acceptTermsGateIfPresent() {
+    await this.page.waitForTimeout(2000);
+    if (this.page.url().includes('/auth/terms-of-service')) {
+      await this.page.getByRole('checkbox').check();
+      await this.page.getByRole('button', { name: /^submit$/i }).click();
+      await this.page.waitForTimeout(1500);
+    }
   }
 
   async expectLoggedIn() {

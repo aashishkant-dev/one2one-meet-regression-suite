@@ -19,9 +19,15 @@ export class DelegateMeetingsPage {
     await this.page.getByText(timeLabel).first().click();
   }
 
-  /** After a request is sent for a slot, the Book button disappears entirely on reopen - guard fires before the modal can open, not just at submit. */
+  /**
+   * After a request is sent for a slot, the Book button disappears entirely on reopen - guard
+   * fires before the modal can open, not just at submit. Card structure confirmed live
+   * 2026-08-13: the time label and the Block/Book row are both direct children of the same
+   * card div, three levels up from the text node - ancestor::*[1] (the old value here) never
+   * actually reached it.
+   */
   bookButtonForSlot(timeLabel: string) {
-    return this.page.getByText(timeLabel).first().locator('xpath=ancestor::*[1]').getByRole('button', { name: /^book$/i });
+    return this.page.getByText(timeLabel).first().locator('xpath=ancestor::*[3]').getByRole('button', { name: /^book$/i });
   }
 
   async openBookMeetingModal(timeLabel: string) {
@@ -29,9 +35,20 @@ export class DelegateMeetingsPage {
     await this.bookButtonForSlot(timeLabel).click();
   }
 
-  /** Field order confirmed live: Filter By Country, Meeting with (react-select), Self Note, Remarks (pre-filled template), Venue, Book Meeting. */
+  /**
+   * Field order confirmed live: Filter By Country, Meeting with (react-select), Self Note,
+   * Remarks (pre-filled template), Venue, Book Meeting. "Meeting with" starts
+   * aria-disabled="true" while the modal fetches the eligible-delegate list for this slot -
+   * confirmed live 2026-08-13 - and the bare getByText(/meeting with/i) label match is
+   * ambiguous with "Filter By Country" 's own react-select control in strict mode, so this
+   * scopes to the exact label and waits out the disabled state first.
+   */
   async submitBookMeeting(input: BookMeetingInput) {
-    await this.page.getByText(/meeting with/i).locator('xpath=following::div[contains(@class,"react-select__control")][1]').click();
+    const meetingWithControl = this.page
+      .getByText('Meeting with', { exact: true })
+      .locator('xpath=following::div[contains(@class,"react-select__control")][1]');
+    await expect(meetingWithControl).not.toHaveClass(/is-disabled/, { timeout: 10_000 });
+    await meetingWithControl.click();
     await this.page.getByRole('option', { name: input.meetingWith, exact: false }).click();
     if (input.selfNote) {
       await this.page.getByLabel(/self note/i).fill(input.selfNote);
