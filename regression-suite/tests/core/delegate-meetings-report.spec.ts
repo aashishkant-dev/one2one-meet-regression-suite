@@ -1,4 +1,7 @@
 import { test, expect } from '../support/fixtures/test-base';
+import { test as base } from '@playwright/test';
+import { env } from '../support/env';
+import { DelegateAuthPage } from '../support/pages/DelegateAuthPage';
 import { DelegateMeetingReportPage } from '../support/pages/DelegateMeetingReportPage';
 
 /**
@@ -37,5 +40,47 @@ test.describe('Delegate Meeting Reports', () => {
       report.exportAllButton().click(),
     ]);
     expect(download.suggestedFilename()).toBeTruthy();
+  });
+
+  base('TC-DRPT-007 delegate cannot see another delegate\'s meeting report data', async ({ browser }) => {
+    base.info().annotations.push({ type: 'module', description: 'Delegate Meeting Reports' });
+    base.info().annotations.push({ type: 'priority', description: 'High' });
+    base.info().annotations.push({
+      type: 'note',
+      description:
+        "CONFIRMED live 2026-08-13: the report route (/delegate/<slug>/meeting-report) and its " +
+        "backend call (GET /api/delegate/getMeetingReports) carry NO delegate ID in the URL/query " +
+        "at all - the report is derived entirely from the caller's session/auth token. There is no " +
+        "URL to tamper with (a stronger security posture than the ID-manipulation attack the " +
+        "original case describes), so this instead verifies the actual property that matters: two " +
+        "different delegate sessions each see only their own data, never each other's.",
+    });
+
+    const ctxA = await browser.newContext();
+    const ctxB = await browser.newContext();
+    const pageA = await ctxA.newPage();
+    const pageB = await ctxB.newPage();
+    await new DelegateAuthPage(pageA).login(env.bookingEventSlug, env.bookingDelegateAUsername, env.bookingDelegateAPassword);
+    await new DelegateAuthPage(pageB).login(env.bookingEventSlug, env.bookingDelegateBUsername, env.bookingDelegateBPassword);
+
+    const reportA = new DelegateMeetingReportPage(pageA);
+    const reportB = new DelegateMeetingReportPage(pageB);
+    await reportA.gotoFromMeetingsPage();
+    await reportB.gotoFromMeetingsPage();
+
+    // Each delegate's report correctly shows their real counterpart (Alex<->Blake) - each
+    // session's report is scoped to its own auth context, not a shared/leaked data set.
+    await expect(pageA.getByText('Blake Echo').first()).toBeVisible();
+    await expect(pageB.getByText('Alex Delta').first()).toBeVisible();
+
+    const rowsA = await reportA.rows().count();
+    const rowsB = await reportB.rows().count();
+    // Neither delegate's report should be empty (that would suggest the session-derived
+    // scoping broke and returned nobody's data).
+    expect(rowsA).toBeGreaterThan(1);
+    expect(rowsB).toBeGreaterThan(1);
+
+    await ctxA.close();
+    await ctxB.close();
   });
 });

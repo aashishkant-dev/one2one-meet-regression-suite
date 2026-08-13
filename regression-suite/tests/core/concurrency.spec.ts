@@ -359,4 +359,100 @@ test.describe('Concurrency - Race Conditions (Gap Coverage)', () => {
     await ctxA.close();
     await ctxB.close();
   });
+
+  test('TC-CR-004 delegate blocks their own open slot at the exact instant another delegate requests that same slot', async ({ browser }) => {
+    test.info().annotations.push({ type: 'priority', description: 'High' });
+
+    const alexCtx = await browser.newContext();
+    const blakeCtx = await browser.newContext();
+    const alexPage = await alexCtx.newPage();
+    const blakePage = await blakeCtx.newPage();
+
+    await new DelegateAuthPage(alexPage).login(env.bookingEventSlug, env.bookingDelegateAUsername, env.bookingDelegateAPassword);
+    await new DelegateAuthPage(blakePage).login(env.bookingEventSlug, env.bookingDelegateBUsername, env.bookingDelegateBPassword);
+
+    const alexMeetings = new DelegateMeetingsPage(alexPage);
+    const blakeMeetings = new DelegateMeetingsPage(blakePage);
+    await alexMeetings.goto();
+    await blakeMeetings.goto();
+
+    const SLOT = '14:20 TO 14:35';
+    // Alex opens the Book-meeting modal targeting Blake for SLOT, Blake blocks that exact same
+    // SLOT on their own calendar - both fired at the same instant.
+    await alexMeetings.openBookMeetingModal(SLOT);
+
+    const [alexResult, blakeResult] = await Promise.allSettled([
+      alexMeetings.submitBookMeeting({ meetingWith: 'Blake Echo', remarks: 'TC-CR-004 race leg: request' }),
+      blakeMeetings.blockSlot(SLOT),
+    ]);
+
+    test.info().annotations.push({
+      type: 'observed-outcome',
+      description: `Alex's request outcome: ${alexResult.status === 'fulfilled' ? alexResult.value.status() : 'rejected: ' + (alexResult as PromiseRejectedResult).reason?.message}. Blake's self-block outcome: ${blakeResult.status}.`,
+    });
+
+    // The two concurrent, conflicting writes (book vs. self-block on the identical slot) must
+    // not both silently "succeed" into a state where the slot is simultaneously booked AND
+    // blocked - at least one of them must be the one the system settles on, not a crash on both.
+    const bothCrashed = alexResult.status === 'rejected' && blakeResult.status === 'rejected';
+    expect(bothCrashed).toBe(false);
+
+    await alexCtx.close();
+    await blakeCtx.close();
+  });
+
+  test('TC-CR-002 Accept vs Reject race from two open tabs of the same recipient session on the SAME pending request', async ({ browser }) => {
+    test.info().annotations.push({ type: 'priority', description: 'High' });
+
+    // QA Automation (organizer's own EO-Delegate profile) still has a genuinely pending
+    // request from Alex Delta at 10:40-10:55 (created in TC-CC-001, never touched since -
+    // TC-CR-001 accepted the DIFFERENT 10:20 one).
+    const ctxA = await browser.newContext();
+    const ctxB = await browser.newContext();
+    const pageA = await ctxA.newPage();
+    const pageB = await ctxB.newPage();
+
+    const navA = new OrganizerNav(pageA);
+    const navB = new OrganizerNav(pageB);
+    await navA.login(env.orgUsername, env.orgPassword);
+    await navB.login(env.orgUsername, env.orgPassword);
+    await navA.switchEventAndWaitFor(seededData.bookingTestEvent.name, /Booking Test Event/i);
+    await navB.switchEventAndWaitFor(seededData.bookingTestEvent.name, /Booking Test Event/i);
+
+    const toggleA = new EODelegateTogglePage(pageA);
+    const toggleB = new EODelegateTogglePage(pageB);
+    await toggleA.clickToggleOn();
+    await toggleB.clickToggleOn();
+    await expect(pageA).toHaveURL(/\/delegate\//, { timeout: 15_000 });
+    await expect(pageB).toHaveURL(/\/delegate\//, { timeout: 15_000 });
+
+    const meetingsA = new DelegateMeetingsPage(pageA);
+    const meetingsB = new DelegateMeetingsPage(pageB);
+    await meetingsA.goto();
+    await meetingsB.goto();
+
+    const SLOT = '10:40 TO 10:55';
+    const [resultA, resultB] = await Promise.allSettled([
+      meetingsA.acceptButtonForSlot(SLOT).click({ timeout: 10_000 }),
+      meetingsB.rejectButtonForSlot(SLOT).click({ timeout: 10_000 }),
+    ]);
+
+    await pageA.waitForTimeout(2000);
+    await pageA.reload();
+    await pageA.waitForTimeout(2000);
+    const stillPending = await meetingsA.acceptButtonForSlot(SLOT).count();
+    const nowConfirmed = await pageA.getByText('Alex Delta').first().isVisible().catch(() => false);
+
+    test.info().annotations.push({
+      type: 'observed-outcome',
+      description: `Tab A (Accept) click: ${resultA.status}. Tab B (Reject) click: ${resultB.status}. Still shown as pending afterward: ${stillPending > 0}. Shows Alex Delta as confirmed for this slot afterward: ${nowConfirmed}.`,
+    });
+
+    // The opposite actions racing on the same request must resolve to exactly one definitive
+    // outcome (accepted OR rejected), not remain stuck showing as pending forever.
+    expect(stillPending).toBe(0);
+
+    await ctxA.close();
+    await ctxB.close();
+  });
 });

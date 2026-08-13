@@ -35,6 +35,13 @@ export class DelegateMeetingsPage {
     await this.bookButtonForSlot(timeLabel).click();
   }
 
+  /** Confirmed live 2026-08-13: "Slot successfully blocked" toast on success, no confirmation dialog. */
+  async blockSlot(timeLabel: string) {
+    await this.expandSlot(timeLabel);
+    await this.page.getByText(timeLabel).first().locator('xpath=ancestor::*[3]').getByRole('button', { name: /^block$/i }).click();
+    await expect(this.page.getByText(/slot successfully blocked/i)).toBeVisible({ timeout: 10_000 });
+  }
+
   /**
    * Field order confirmed live: Filter By Country, Meeting with (react-select), Self Note,
    * Remarks (pre-filled template), Venue, Book Meeting. "Meeting with" starts
