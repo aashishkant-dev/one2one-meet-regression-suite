@@ -245,15 +245,7 @@ test.describe('Concurrency - Race Conditions (Gap Coverage)', () => {
     await blakeCtx.close();
   });
 
-  /**
-   * Not automated (test.skip): the Add New Event form has been substantially redesigned since
-   * EventsPage.createEvent() was written (added a date-range picker, Venue Timezone, split
-   * Venue Country/City into dependent react-selects, added Post-Event Delegate Access Window
-   * and Description) - confirmed live 2026-08-13. This is the same reason the pre-existing
-   * TC-EV-001 test is currently broken too. Needs a dedicated EventsPage rewrite, not a quick
-   * label fix like the SponsorCategoriesPage ones above.
-   */
-  test.skip('TC-CE-001 two organizer sessions simultaneously create an event with the IDENTICAL name (slug collision)', async ({ browser }) => {
+  test('TC-CE-001 two organizer sessions simultaneously create an event with the IDENTICAL name (slug collision)', async ({ browser }) => {
     test.info().annotations.push({ type: 'priority', description: 'High' });
 
     const ctxA = await browser.newContext();
@@ -274,9 +266,11 @@ test.describe('Concurrency - Race Conditions (Gap Coverage)', () => {
     const raceName = `ConcurrencyEvent-${Date.now()}`;
     const input = {
       name: raceName,
-      city: 'Kathmandu',
+      timezone: 'Kathmandu',
       venue: 'Race Test Venue',
       address: 'Race Test Address',
+      country: 'Nepal',
+      city: 'Kathmandu',
       email: `race-${Date.now()}@example.com`,
       contactNumber: '+9779800000000',
     };
@@ -285,10 +279,13 @@ test.describe('Concurrency - Race Conditions (Gap Coverage)', () => {
       eventsA.createEvent(input),
       eventsB.createEvent(input),
     ]);
-    if (resultA.status === 'rejected') console.log('EVENT A REJECTED:', resultA.reason?.message);
-    if (resultB.status === 'rejected') console.log('EVENT B REJECTED:', resultB.reason?.message);
+    await pageA.waitForTimeout(5000); // banner image upload + save takes longer than a plain form submit
+    // A successful create pops an "Event created successfully" modal on top of everything else.
+    const laterBtnA = pageA.getByRole('button', { name: /^later$/i });
+    if (await laterBtnA.isVisible({ timeout: 3000 }).catch(() => false)) await laterBtnA.click();
+    const laterBtnB = pageB.getByRole('button', { name: /^later$/i });
+    if (await laterBtnB.isVisible({ timeout: 3000 }).catch(() => false)) await laterBtnB.click();
 
-    await pageA.waitForTimeout(2000);
     await eventsA.goto();
     await eventsA.searchByName(raceName);
     await pageA.waitForTimeout(1500);
