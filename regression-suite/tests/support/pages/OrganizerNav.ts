@@ -28,11 +28,16 @@ export class OrganizerNav {
   }
 
   /**
-   * New gotcha confirmed live 2026-08-12: on some logins the app inserts a 5-step
-   * re-acceptance gate at /auth/terms-of-service (tos, security_whitepaper, dpa, sla,
-   * eula) before landing on the real dashboard - one checkbox + Continue click per step.
-   * Not present on every login (server-side "has this version been accepted" check), so
-   * this is a no-op when the gate doesn't appear rather than a hard requirement.
+   * Terms-of-service re-acceptance gate at /auth/terms-of-service, not present on every
+   * login (server-side "has this version been accepted" check). Two DIFFERENT UI shapes
+   * confirmed live so far, and it can change between them without warning:
+   * - 2026-08-12: 5 separate step tabs (tos/security_whitepaper/dpa/sla/eula), one checkbox
+   *   + "Continue" click per step.
+   * - 2026-08-13: 6 tabs shown at once (adds privacy_policy) but ONE combined checkbox
+   *   ("I have read and agree to all...") + a single "Submit" button - same shape the
+   *   delegate-side gate uses (DelegateAuthPage.acceptTermsGateIfPresent). A second
+   *   concurrent organizer session hitting the OLD Continue-only logic here would loop
+   *   uselessly since no "Continue" button exists in this shape - handle both.
    */
   private async acceptTermsGateIfPresent() {
     let guard = 0;
@@ -41,6 +46,12 @@ export class OrganizerNav {
       const checkbox = this.page.getByRole('checkbox');
       if (await checkbox.count()) {
         await checkbox.first().check();
+      }
+      const submitBtn = this.page.getByRole('button', { name: /^submit$/i });
+      if (await submitBtn.count()) {
+        await submitBtn.click();
+        await this.page.waitForTimeout(1200);
+        continue;
       }
       await this.page.getByRole('button', { name: /continue/i }).click();
       await this.page.waitForTimeout(1000);

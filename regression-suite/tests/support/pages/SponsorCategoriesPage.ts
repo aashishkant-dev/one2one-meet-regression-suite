@@ -28,12 +28,14 @@ export class SponsorCategoriesPage {
     await this.pickReactSelect(/display/i, value);
   }
 
+  /** Label copy changed from "Name" to "Category Name" sometime after 2026-08-09 - match either. */
   async fillName(name: string) {
-    await this.page.getByLabel(/^name$/i).fill(name);
+    await this.page.getByLabel(/^(category )?name$/i).fill(name);
   }
 
+  /** Button copy changed to "Add Sponsor Category" sometime after 2026-08-09 - match old and new labels. */
   async save() {
-    await this.page.getByRole('button', { name: /^save$|^create$/i }).click();
+    await this.page.getByRole('button', { name: /^save$|^create$|^add sponsor category$/i }).click();
   }
 
   row(name: string) {
