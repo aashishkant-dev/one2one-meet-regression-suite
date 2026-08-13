@@ -78,10 +78,22 @@ export class OrganizerNav {
     await expect(this.page.locator('body')).toContainText(contentMarker, { timeout: 10_000 });
   }
 
-  /** Sidebar Settings -> the blue gear "Settings" icon-card (2-card layout, confirmed 2026-08-09). */
+  /**
+   * Sidebar Settings -> the in-page "My Profile" tab strip (Company Details / Contact
+   * Person / Settings). The plain `.last()` locator this used to use is ambiguous with the
+   * sidebar's own "Settings" link and with transient error toasts that reuse the word
+   * "Settings" in their surrounding DOM - scope tightly to the tab strip instead. Also waits
+   * out a transient "Failed to fetch event data" toast seen live 2026-08-12 under heavy
+   * concurrent staging load, which otherwise intercepts the click.
+   */
   async openMeetingSettings() {
     await this.page.locator('a:has-text("Settings")').last().click();
-    await this.page.getByRole('link', { name: 'Settings' }).or(this.page.getByText('Settings', { exact: true })).last().click();
+    const errorToast = this.page.getByText(/failed to fetch/i);
+    if (await errorToast.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await errorToast.waitFor({ state: 'hidden', timeout: 10_000 }).catch(() => {});
+    }
+    const tabStrip = this.page.locator('div').filter({ hasText: 'Company Details' }).filter({ hasText: 'Contact Person' }).last();
+    await tabStrip.getByText('Settings', { exact: true }).click();
   }
 
   /** Meeting Settings + Notification Settings + 2FA all submit together via this one button. */
