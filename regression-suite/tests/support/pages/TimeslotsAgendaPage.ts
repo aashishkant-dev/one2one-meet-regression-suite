@@ -17,7 +17,12 @@ export class TimeslotsAgendaPage {
     await this.page.getByRole('button', { name: /add/i }).click();
     // Duration field is a spinbutton, accessible name "Duration (minutes)", defaults to 60.
     await this.page.getByRole('spinbutton', { name: /duration \(minutes\)/i }).fill(String(minutes));
-    await this.page.getByRole('button', { name: /^save$/i }).click();
+    // Button copy changed from "Save" to "Add New Timeslot" sometime after 2026-08-09 - match both.
+    await this.page.getByRole('button', { name: /^save$|^add new timeslot$/i }).click();
+  }
+
+  saveButton() {
+    return this.page.getByRole('button', { name: /^save$|^add new timeslot$/i });
   }
 
   durationRow(minutes: number) {
