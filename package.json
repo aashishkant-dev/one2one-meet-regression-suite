@@ -1,0 +1,10 @@
+{
+  "name": "one2one-meet-regression-suite",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Workspace root for the One2One Meet QA projects - the full regression-suite and the curated one2one-automation smoke suite. A single shared node_modules keeps both on one @playwright/test install.",
+  "workspaces": [
+    "regression-suite",
+    "one2one-automation"
+  ]
+}
