@@ -18,11 +18,14 @@ test.describe('Event Management', () => {
     await events.goto();
     await events.createEvent({
       name: uniqueName,
+      timezone: 'Kathmandu',
+      country: 'Nepal',
       city: 'Kathmandu',
       venue: 'IIG',
       address: 'Test Address',
       email: `regression-${Date.now()}@example.com`,
-      contactNumber: '9800000000',
+      // Needs a leading +<countrycode> - see EventsPage.createEvent()'s comment on the phone widget.
+      contactNumber: '+9779800000000',
     });
     await events.searchByName(uniqueName);
     await expect(events.eventRow(uniqueName)).toBeVisible();

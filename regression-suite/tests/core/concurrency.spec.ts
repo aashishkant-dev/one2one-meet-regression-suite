@@ -280,12 +280,8 @@ test.describe('Concurrency - Race Conditions (Gap Coverage)', () => {
       eventsA.createEvent(input),
       eventsB.createEvent(input),
     ]);
-    await pageA.waitForTimeout(5000); // banner image upload + save takes longer than a plain form submit
-    // A successful create pops an "Event created successfully" modal on top of everything else.
-    const laterBtnA = pageA.getByRole('button', { name: /^later$/i });
-    if (await laterBtnA.isVisible({ timeout: 3000 }).catch(() => false)) await laterBtnA.click();
-    const laterBtnB = pageB.getByRole('button', { name: /^later$/i });
-    if (await laterBtnB.isVisible({ timeout: 3000 }).catch(() => false)) await laterBtnB.click();
+    // createEvent() now dismisses the post-create "Event created successfully" modal itself
+    // (EventsPage.dismissPostCreateModalIfPresent) - no per-caller wait+dismiss needed here.
 
     await eventsA.goto();
     await eventsA.searchByName(raceName);

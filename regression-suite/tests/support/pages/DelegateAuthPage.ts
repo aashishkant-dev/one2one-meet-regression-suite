@@ -36,7 +36,8 @@ export class DelegateAuthPage {
     await expect(this.page).toHaveURL(/\/delegate\//, { timeout: 15_000 });
   }
 
+  /** Error copy changed to "Invalid credentials" sometime after 2026-08-13 - match old and new wording. */
   async expectInvalidLoginError() {
-    await expect(this.page.getByText(/invalid login|not found/i)).toBeVisible();
+    await expect(this.page.getByText(/invalid login|not found|invalid credentials/i)).toBeVisible();
   }
 }

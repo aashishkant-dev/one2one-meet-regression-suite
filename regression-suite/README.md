@@ -11,6 +11,16 @@ TC-ID from the 216-case master register (`../master-test-register.html`) so a fa
 straight back to the case's full steps/data/expected-result. See `CASE_MAP.md` for exactly
 which TC-IDs are covered and where.
 
+**Want a fast "did this change break anything obvious" check instead of the full suite?**
+See `../one2one-automation` - a curated 13-case post-deploy smoke subset with its own GitHub
+Actions workflow, built on top of this project's Page Objects (`tests/support/pages/`) so it
+never drifts out of sync with the selectors verified here.
+
+This repo is an **npm workspace root's member**, not a standalone package - `../package.json`
+lists both this project and `one2one-automation`, sharing one `node_modules` so there's only
+ever one `@playwright/test` install between them. `npm install` from either folder resolves to
+the shared root install automatically; nothing below needs to change because of this.
+
 ## Status: written, not yet executed
 
 This code was written in a session with no live browser/Playwright tool and no access to the

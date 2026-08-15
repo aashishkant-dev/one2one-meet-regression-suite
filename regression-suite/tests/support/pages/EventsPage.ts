@@ -104,6 +104,22 @@ export class EventsPage {
     await this.page.locator('#banner').setInputFiles(input.bannerPath ?? path.resolve(__dirname, '../../../recon/2026-08-12-gap-sweep/test-banner.png'));
 
     await this.page.getByRole('button', { name: /add new event/i }).click();
+    await this.dismissPostCreateModalIfPresent();
+  }
+
+  /**
+   * A successful create now pops an "Event created successfully" modal with a "Later" button
+   * on top of everything else (confirmed live 2026-08-15) - callers used to have to dismiss
+   * this themselves (see concurrency.spec.ts's inline copy of this same wait+click before this
+   * was centralized here), which silently broke plain createEvent() callers like TC-EV-001
+   * since the page never returns to the Events list until this is dismissed.
+   */
+  private async dismissPostCreateModalIfPresent() {
+    await this.page.waitForTimeout(5000); // banner image upload + save takes longer than a plain form submit
+    const laterBtn = this.page.getByRole('button', { name: /^later$/i });
+    if (await laterBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await laterBtn.click();
+    }
   }
 
   eventRow(eventName: string) {

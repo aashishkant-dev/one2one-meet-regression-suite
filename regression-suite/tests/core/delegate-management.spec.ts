@@ -24,16 +24,17 @@ test.describe('Delegate Management', () => {
     await delegates.createDelegate({
       companyName,
       companyEmail: `smoke-${Date.now()}@example.com`,
-      accessType: 'Individual',
+      // Confirmed live 2026-08-15: seeded option is "Individual Access", not bare "Individual".
+      accessType: 'Individual Access',
       country: 'Nepal',
       city: 'Kathmandu',
-      contactNumber: '9800000000',
+      contactNumber: '+9779800000000',
       companyDescription: 'Regression smoke fixture',
       participantSalutation: 'Mr',
       participantFirstName: 'Smoke',
       participantLastName: 'Test',
       participantEmail: `smoke-participant-${Date.now()}@example.com`,
-      participantContactNumber: '9800000001',
+      participantContactNumber: '+9779800000001',
     });
 
     await expect(delegates.row(companyName)).toBeVisible();

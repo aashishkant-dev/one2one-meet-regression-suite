@@ -9,17 +9,23 @@ export class AccessTypesPage {
     await expect(this.page).toHaveURL(/\/organizer\/access-types/);
   }
 
+  /** Button copy changed to "Add Access Type" sometime after 2026-08-12 - match old and new labels. */
   async openAddForm() {
-    await this.page.getByRole('button', { name: /add new/i }).click();
+    await this.page.getByRole('button', { name: /^add new$|^add access type$/i }).click();
   }
 
+  /** Type changed from a react-select dropdown to plain radio buttons (confirmed live 2026-08-15) - "Individual" is checked by default. */
   async selectType(type: 'Individual' | 'Shared') {
-    await this.page.getByText(/^type$/i).locator('xpath=following::div[contains(@class,"react-select__control")][1]').click();
-    await this.page.getByRole('option', { name: type, exact: true }).click();
+    await this.page.getByRole('radio', { name: type }).check();
   }
 
+  /**
+   * Not a real <label> association (confirmed live 2026-08-15) - the "Max Participants *" text
+   * is an unassociated sibling, so the field's only accessible name comes from its placeholder.
+   * getByLabel never matches it; use the role/name (== placeholder) instead.
+   */
   maxParticipantsField() {
-    return this.page.getByLabel(/max participants?/i);
+    return this.page.getByRole('spinbutton', { name: /max participants/i });
   }
 
   /** Individual auto-fills 1 and disables the field - by design, not a bug. Any Max-Participants value test must select Shared first. */
@@ -31,8 +37,9 @@ export class AccessTypesPage {
     await this.page.getByLabel(/^name$/i).fill(name);
   }
 
+  /** Button copy changed to "Create Access Type" sometime after 2026-08-12 - match old and new labels. */
   saveButton() {
-    return this.page.getByRole('button', { name: /^save$|^create$/i });
+    return this.page.getByRole('button', { name: /^save$|^create$|^create access type$/i });
   }
 
   async save() {

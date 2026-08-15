@@ -9,6 +9,43 @@ Full case detail (steps, test data, expected result, original manual Pass/Fail/C
 the 2026-06-18–22 execution pass) lives in `../master-test-register.html` — open it in a
 browser and use its search box with the TC-ID.
 
+**Need a fast post-deploy check instead of the full suite?** See `../one2one-automation` - a
+13-case curated smoke subset (Auth & Session, Core CRUD, Concurrency) that's safe to re-run
+after every change without any manual fixture reset, plus a GitHub Actions workflow to run it
+on demand or nightly. It imports its Page Objects straight from this project's
+`tests/support/pages/`, so every fix below applies there too automatically.
+
+## 2026-08-15 UI-drift fixes
+
+Built `one2one-automation` and ran it live to shake out drift since these Page Objects were
+last verified. Found and fixed 8 real breakages, all from the app changing out from under
+stale selectors/test data (not flaky tests) - each is commented in place at its fix site:
+
+| Page Object | What changed in the app | Fix |
+|---|---|---|
+| `AccessTypesPage.openAddForm` | Button renamed "Add New" → "Add Access Type" | Match both |
+| `AccessTypesPage.selectType` | Type field: react-select → plain radio buttons | Click the radio instead |
+| `AccessTypesPage.saveButton` | Button renamed → "Create Access Type" | Match both |
+| `AccessTypesPage.maxParticipantsField` | Never had a real `<label>` - only worked by accident | Match by role+placeholder instead of `getByLabel` |
+| `DelegatesPage.pickReactSelect` | Access Type label text now also matches the Country field | Add `.first()` |
+| `DelegatesPage.pickReactSelect` (option click) | Unscoped option locator also matches native phone-country-code `<option>`s | Scope to `.react-select__option` |
+| `DelegatesPage` Country/City labels | Renamed to plural "Countries"/"Cities" | Match both singular and plural |
+| `DelegatesPage` Salutation | react-select → plain text field, no real label | Match by placeholder |
+| `DelegatesPage` First/Last Name, Contact Email | Never had real `<label>`s | Match by placeholder |
+| `DelegatesPage` both Contact Number fields | Auto-country-detect phone widget, needs real keystrokes + `+<countrycode>` | Added `fillPhoneNumber()` helper, mirroring `EventsPage`'s existing pattern |
+| `DelegatesPage` Create button | Renamed → "Create Delegate" | Match both |
+| `EventsPage.createEvent` | New post-submit "Event created successfully" modal | Dismiss it inside `createEvent()` itself (was only handled ad-hoc in `concurrency.spec.ts` before) |
+
+Also fixed the same stale test data (`accessType: 'Individual'` → `'Individual Access'`,
+missing `+977` phone prefix) in `delegate-management.spec.ts` and `event-management.spec.ts`,
+which had the identical latent bugs.
+
+**Note on this session's `one2one-automation` dev runs:** staging was hit with ~15 consecutive
+full test runs while diagnosing the above, and a handful of runs saw `net::ERR_NETWORK_CHANGED`
+/ `net::ERR_INTERNET_DISCONNECTED` or a stray failed login - confirmed local sandbox network
+noise from that sustained pace, not app or code issues (each affected test passed cleanly on
+a clean-network run). Not expected under normal single-run usage or in CI.
+
 | Module | Automated / Total | Spec file | TC-IDs covered |
 |---|---|---|---|
 | Event Management | 3 / 10 | `tests/core/event-management.spec.ts` | TC-EV-001, TC-EV-N01, TC-EV-006 |
