@@ -2,7 +2,7 @@ import { test, expect } from '../support/fixtures/test-base';
 import { EventsPage } from '../support/pages/EventsPage';
 
 /**
- * Smoke subset of the 10-case Event Management module (see ../../master-test-register.html
+ * Smoke subset of the 10-case Event Management module (see ../../docs/master-test-register.html
  * for the full register). Module confirmed 10/10 passing during the 2026-08-09 live session -
  * these 3 cover the golden path + the two validation guards most likely to regress.
  */

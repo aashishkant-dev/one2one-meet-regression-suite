@@ -7,7 +7,7 @@ git anywhere, so it disappeared when the working folder was cleaned up). This is
 the start, so history survives even if the working copy doesn't.
 
 33 smoke-tier test cases across the 14 core functional modules, each titled with its real
-TC-ID from the 216-case master register (`../master-test-register.html`) so a failure points
+TC-ID from the 216-case master register (`../docs/master-test-register.html`) so a failure points
 straight back to the case's full steps/data/expected-result. See `CASE_MAP.md` for exactly
 which TC-IDs are covered and where.
 

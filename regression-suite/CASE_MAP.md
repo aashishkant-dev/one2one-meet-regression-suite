@@ -1,12 +1,12 @@
 # Test Case Traceability Map
 
 Maps every TC-ID in this automated smoke suite back to its spec file, and shows how much
-of the full 216-case register (`../master-test-register.html`) each module currently has
+of the full 216-case register (`../docs/master-test-register.html`) each module currently has
 automated coverage for. This is the file to check when someone asks "is TC-XX-NNN covered
 by CI, and if it fails, which file do I look at?"
 
 Full case detail (steps, test data, expected result, original manual Pass/Fail/Comments from
-the 2026-06-18–22 execution pass) lives in `../master-test-register.html` — open it in a
+the 2026-06-18–22 execution pass) lives in `../docs/master-test-register.html` — open it in a
 browser and use its search box with the TC-ID.
 
 **Need a fast post-deploy check instead of the full suite?** See `../one2one-automation` - a
@@ -19,7 +19,9 @@ on demand or nightly. It imports its Page Objects straight from this project's
 
 Built `one2one-automation` and ran it live to shake out drift since these Page Objects were
 last verified. Found and fixed 8 real breakages, all from the app changing out from under
-stale selectors/test data (not flaky tests) - each is commented in place at its fix site:
+stale selectors/test data (not flaky tests) - each is commented in place at its fix site.
+Condensed table below; full write-up with symptom/root-cause/fix/verify-command per bug is
+`../one2one-automation/BUGS_FOUND_2026-08-15.md`.
 
 | Page Object | What changed in the app | Fix |
 |---|---|---|
@@ -86,7 +88,7 @@ same way, most likely for the same underlying reason (fixture state left over fr
 2026-08-13, not a fresh regression). **Action item before the next run:** pick fresh
 unconsumed slots (or reset the Booking Test Event fixture) for these 4 cases so the next
 execution gives a clean pass/fail signal instead of a stale-state false negative. Full
-per-test detail: `../One2One_Meet_Concurrency_LoginSession_ExecutionResults_2026-08-15.xlsx`.
+per-test detail: `../docs/One2One_Meet_Concurrency_LoginSession_ExecutionResults_2026-08-15.xlsx`.
 
 **Authentication - Gap Coverage is not part of the original 216-case register** — these 7 TC-IDs
 were found by live-surfing staging on 2026-08-11 (see `recon/2026-08-11-auth-and-module-sweep/`)
@@ -158,7 +160,7 @@ touching this suite isn't surprised.
 
 ## How to extend coverage
 
-1. Pick the next-highest-value TC-ID(s) from `../master-test-register.html` for a module above.
+1. Pick the next-highest-value TC-ID(s) from `../docs/master-test-register.html` for a module above.
 2. Check whether a page object for that module already exists under `tests/support/pages/` —
    most core modules do; extend it rather than duplicating locators in the spec file.
 3. Title the test with the real TC-ID exactly as it appears in the register (e.g.
