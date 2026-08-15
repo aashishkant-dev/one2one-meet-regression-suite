@@ -1,0 +1,228 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║          🧪 CONCURRENCY TEST REPORT - QUICK REFERENCE CARD 🧪                ║
+║                                                                              ║
+║                        One2One Meet Test Automation                          ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 📊 GENERATE EXCEL REPORT (2 STEPS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1: Open PowerShell and run this command:
+
+    python generate_test_report.py
+
+STEP 2: Open the file it creates:
+
+    Concurrency_Test_Report.xlsx
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 📝 FILL IN YOUR TESTS (3 COLUMNS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For each test case, fill in just 3 columns:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ STATUS (Column E)          │ ACTUAL RESULT (Column F)  │ COMMENTS (Column G)   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Choose ONE:                 │ What actually happened     │ Notes, errors, etc.   │
+│                             │                           │                       │
+│ ✅ Pass                     │ ✅ Good example:           │ ✅ Good examples:     │
+│    Test worked perfectly    │    "Exactly one delegate  │    "Worked first try" │
+│                             │     got confirmed, other  │                       │
+│ ❌ Fail                     │     got rejection message" │ "Response: 234ms"     │
+│    Test found a bug         │                           │                       │
+│                             │ ❌ Bad example:           │ "Issue #456"          │
+│ ⏭️ Not Tested               │    "Both got confirmed -   │                       │
+│    Couldn't run test        │     double booking bug!"   │ "Timeout after 30s"   │
+│                             │                           │                       │
+│                             │ ⏭️ Skipped example:        │ "Login failed - setup │
+│                             │    "Couldn't run, login   │  issue"               │
+│                             │     issues"               │                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 🎯 PRIORITY LEVELS (What These Mean)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  🔴 CRITICAL
+  └─ MUST PASS before going live. If this fails = don't release!
+     (Examples: TC-CC-001, TC-CR-005, TC-CE-006)
+
+  🟠 HIGH
+  └─ Very important. Blocking if failed. Needs fixing before release.
+     (Examples: TC-CC-003, TC-CR-001)
+
+  🟡 MEDIUM
+  └─ Should pass but not blocking. Fix in next release if failed.
+     (Examples: TC-CR-006)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 👀 WHAT EACH TEST IS CHECKING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BOOKING RACES (TC-CC-001 to 009):
+  "When two people try to book the same slot at the exact same time..."
+
+  What we want: Exactly one person gets it, other gets a clear message
+  What would be bad: Both think they booked it (double-booking!) 😱
+
+
+SESSION RACES (TC-CR-001 to 007):
+  "When the same person does two opposing actions simultaneously..."
+
+  What we want: One action wins, they see consistent results on all devices
+  What would be bad: One device says "Accepted", other says "Rejected" 🤯
+
+
+EVENT SETUP RACES (TC-CE-001 to 006):
+  "When organizers edit event settings at the exact same time..."
+
+  What we want: Event ends up in one clean state, no data corruption
+  What would be bad: Event settings confused, meetings disappear 😱
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 📋 EXAMPLE: HOW TO FILL IN A ROW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Test ID:    TC-CC-001
+Test Name:  Two delegates race for same slot (autoAccept OFF)
+Priority:   🔴 CRITICAL
+
+What should happen:
+  One delegate gets the slot, the other gets a clear message saying
+  "This slot is no longer available"
+
+What actually happened:
+  ✅ PASS - Delegate A got the slot as PENDING. Delegate B got message
+  "This slot with Jane is no longer available". No double-booking.
+
+Status column:        Pass ✅
+Actual Result column: Exactly one delegate got confirmed, other got
+                      clear rejection. No double booking detected.
+Comments column:      Tested 5 times, consistent behavior.
+                      Response time: 245ms.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ ⚠️ EXAMPLE: WHEN A TEST FAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Status column:        Fail ❌
+Actual Result:        BOTH delegates got confirmed to the same slot!
+                      Double-booking detected. This is critical.
+Comments:             Screenshot attached. Database shows 2 records for
+                      same slot/time. Bug: Possibly missing database lock
+                      in booking logic.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 📊 SUMMARY SHEET (AUTO-CALCULATED)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After you fill in Status for each test, the Summary sheet automatically shows:
+
+  Total Tests:     29
+  Tests Passed:    27 (auto-counted green Pass)
+  Tests Failed:    2  (auto-counted red Fail)
+  Pass Rate:       93% (auto-calculated)
+
+You don't need to do anything - it updates automatically! ✨
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 🚀 STEP-BY-STEP WORKFLOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BEFORE TESTING:
+  ☐ Generate Excel: python generate_test_report.py
+  ☐ Open: Concurrency_Test_Report.xlsx
+  ☐ Fill in: Date, Tester Name, Environment (in Test Results sheet)
+
+DURING TESTING:
+  ☐ Run: .\run-tests.ps1 or npm test
+  ☐ Keep Excel open on your screen
+  ☐ As each test completes, immediately fill in the row:
+     - Status: Pass/Fail/Not Tested
+     - Actual Result: What you observed
+     - Comments: Any notes or issues
+  ☐ Don't wait to fill in later - do it while fresh in your mind!
+
+AFTER TESTING:
+  ☐ Check Summary sheet - your pass rate
+  ☐ Find all "Fail" results
+  ☐ Review and understand what went wrong
+  ☐ Save file as: Concurrency_Results_[Date]_[YourName].xlsx
+  ☐ Share with team
+
+RELEASE DECISION:
+  ☐ Look at Summary: Pass Rate
+  ☐ Check Critical tests: Any failures? If yes → DON'T RELEASE
+  ☐ Check High tests: Any failures? If yes → needs fixing
+  ☐ If all tests pass → ready to release! 🎉
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 💾 SAVING YOUR FILE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After testing, save as:
+
+  Concurrency_Results_2026-01-15_QATeam.xlsx
+                    ^^^^^^^^^^^^^^^^ ^^^^^^
+                    Date               Tester Name
+
+This makes it easy to:
+  ✓ Track testing history
+  ✓ Find files later
+  ✓ Compare results over time
+  ✓ Show to stakeholders
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ ❓ TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"Python not found"
+→ Install Python from python.org
+→ Then: pip install openpyxl
+
+"openpyxl not found"
+→ Run: pip install openpyxl
+
+"Summary sheet not calculating pass rate"
+→ Check Status column has EXACT text: "Pass" or "Fail" (not "passes" or "PASS")
+
+"Want to create Excel manually"
+→ See: EXCEL_REPORT_GUIDE.md for manual template
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 📞 NEED HELP?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Full guides:
+  • EXCEL_REPORT_GUIDE.md ............. Complete guide
+  • TEST_CASES_IMPLEMENTED.md ......... What each test does
+  • README.md ......................... Technical details
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ ✨ YOU'RE ALL SET! ✨
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. python generate_test_report.py
+2. Open Concurrency_Test_Report.xlsx
+3. Run: .\run-tests.ps1
+4. Fill in results
+5. Share with team! 🚀
+
+
+Made with ❤️ for easy testing!
