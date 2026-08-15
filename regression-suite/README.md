@@ -43,6 +43,52 @@ npx playwright test -g "TC-DM-001"              # single case by TC-ID
 npm run test:tracked        # full run + appends to REGRESSION_LOG.md (see below)
 ```
 
+### Run one module at a time
+
+Every module has its own spec file under `tests/core/`. Run any of them directly with
+`npx playwright test <path>`, or through `npm run test:tracked -- <path>` if you want the run
+logged to `REGRESSION_LOG.md` / `regression-log/history.json`. Add `--headed` to watch it,
+or `--ui` for Playwright's interactive mode.
+
+| Module | Command |
+|---|---|
+| Event Management | `npx playwright test tests/core/event-management.spec.ts` |
+| Delegate Management | `npx playwright test tests/core/delegate-management.spec.ts` |
+| Access Types | `npx playwright test tests/core/access-types.spec.ts` |
+| Sponsor Categories | `npx playwright test tests/core/sponsor-categories.spec.ts` |
+| Sponsors | `npx playwright test tests/core/sponsors.spec.ts` |
+| Timeslots & Agenda | `npx playwright test tests/core/timeslots-agenda.spec.ts` |
+| Registration Links | `npx playwright test tests/core/registration-links.spec.ts` |
+| Table Configuration | `npx playwright test tests/core/table-configuration.spec.ts` |
+| Meeting Booking & Requests | `npx playwright test tests/core/meeting-booking.spec.ts` |
+| Manual Booking | `npx playwright test tests/core/manual-booking.spec.ts` |
+| Announcements & Feedback | `npx playwright test tests/core/announcements-feedback.spec.ts` |
+| Live Meetings Monitor | `npx playwright test tests/core/live-meetings.spec.ts` |
+| Reports | `npx playwright test tests/core/reports.spec.ts` |
+| Delegate Login & Profile | `npx playwright test tests/core/delegate-login.spec.ts` |
+| Settings (toggle gaps) | `npx playwright test tests/core/meeting-settings.spec.ts` |
+| Authentication - Login & Session (gaps) | `npx playwright test tests/core/authentication.spec.ts` |
+| **Concurrency - Race Conditions** | `npx playwright test tests/core/concurrency.spec.ts` |
+| EO-Delegate Toggle | `npx playwright test tests/core/eo-delegate-toggle.spec.ts` |
+| Dashboard Search Bar | `npx playwright test tests/core/dashboard-search.spec.ts` |
+| Delegate Directory Search | `npx playwright test tests/core/delegate-directory-search.spec.ts` |
+| Delegate Meeting Reports | `npx playwright test tests/core/delegate-meetings-report.spec.ts` |
+| Delegate Feedback (gaps) | `npx playwright test tests/core/delegate-feedback.spec.ts` |
+
+Run several modules in one tracked pass by passing multiple paths, e.g. the command used for
+this session's live run:
+
+```bash
+npm run test:tracked -- tests/core/authentication.spec.ts tests/core/concurrency.spec.ts
+```
+
+**Note on the `--reporter` flag:** don't override it on the command line (e.g.
+`--reporter=list,json`) when using `test:tracked` — that replaces the `json` reporter's
+`outputFile` target configured in `playwright.config.ts` (`regression-log/last-run.json`) with
+Playwright's default of stdout, so `run-tracked.js` ends up diffing against a stale report
+instead of the run you just did. If you need a custom reporter for a one-off, use plain
+`npx playwright test` instead of `test:tracked`.
+
 ## How regression tracking works (the "track down easily" part)
 
 Every test is titled with its real TC-ID. `npm run test:tracked`:
