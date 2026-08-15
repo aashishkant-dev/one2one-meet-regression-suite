@@ -1,0 +1,29 @@
+{
+  "name": "one2one-concurrency-tests",
+  "version": "1.0.0",
+  "description": "Concurrency and Race Condition Tests for One2One Meet",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:cc": "playwright test 01-case1 02-case1 03-case2 04-case3",
+    "test:cr": "playwright test 05-idempotency 06-advanced",
+    "test:ce": "playwright test 07-event-setup",
+    "test:report": "playwright show-report",
+    "codegen": "playwright codegen https://one2one.techarttrekkies.com.np"
+  },
+  "keywords": [
+    "playwright",
+    "concurrency",
+    "race-conditions",
+    "testing",
+    "automation"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {}
+}
