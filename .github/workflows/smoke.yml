@@ -1,0 +1,82 @@
+name: Post-Deploy Smoke Suite
+
+# Runs the curated one2one-automation smoke suite against staging - the "did this change
+# obviously break anything" check, so nobody has to manually click through the app after
+# every deploy.
+#
+# Trigger it:
+#   - Manually, right after deploying a change ("Run workflow" button, Actions tab)
+#   - Automatically, nightly at 03:00 UTC as a drift safety net
+#   - Automatically, on any push to master that touches the smoke suite itself or the
+#     shared Page Objects it imports from regression-suite/tests/support - so a selector
+#     fix or a new case is verified before it's trusted
+#
+# Required repo secrets (Settings -> Secrets and variables -> Actions):
+#   O2O_STAGING_BASE_URL, O2O_SUPERADMIN_USERNAME, O2O_SUPERADMIN_PASSWORD,
+#   O2O_ORG_USERNAME, O2O_ORG_PASSWORD, O2O_BOOKING_EVENT_SLUG,
+#   O2O_BOOKING_DELEGATE_A_USERNAME, O2O_BOOKING_DELEGATE_A_PASSWORD
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 3 * * *'
+  push:
+    branches: [master]
+    paths:
+      - 'one2one-automation/**'
+      - 'regression-suite/tests/support/**'
+      - '.github/workflows/smoke.yml'
+
+jobs:
+  smoke:
+    name: Run smoke suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies (npm workspaces - shared install for both QA projects)
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: one2one-automation
+        run: npx playwright install --with-deps chromium
+
+      - name: Run smoke suite
+        working-directory: one2one-automation
+        env:
+          O2O_STAGING_BASE_URL: ${{ secrets.O2O_STAGING_BASE_URL }}
+          O2O_SUPERADMIN_USERNAME: ${{ secrets.O2O_SUPERADMIN_USERNAME }}
+          O2O_SUPERADMIN_PASSWORD: ${{ secrets.O2O_SUPERADMIN_PASSWORD }}
+          O2O_ORG_USERNAME: ${{ secrets.O2O_ORG_USERNAME }}
+          O2O_ORG_PASSWORD: ${{ secrets.O2O_ORG_PASSWORD }}
+          O2O_BOOKING_EVENT_SLUG: ${{ secrets.O2O_BOOKING_EVENT_SLUG }}
+          O2O_BOOKING_DELEGATE_A_USERNAME: ${{ secrets.O2O_BOOKING_DELEGATE_A_USERNAME }}
+          O2O_BOOKING_DELEGATE_A_PASSWORD: ${{ secrets.O2O_BOOKING_DELEGATE_A_PASSWORD }}
+          CI: true
+        run: npm test
+
+      - name: Upload HTML report (always, so a passing run's trace is available too)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-report-${{ github.run_number }}
+          path: one2one-automation/playwright-report/
+          retention-days: 14
+
+      - name: Upload failure traces/videos
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-failure-artifacts-${{ github.run_number }}
+          path: one2one-automation/test-results/
+          retention-days: 14
