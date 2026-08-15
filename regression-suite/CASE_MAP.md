@@ -25,14 +25,31 @@ browser and use its search box with the TC-ID.
 | Live Meetings Monitor | 1 / 8 | `tests/core/live-meetings.spec.ts` | TC-LM-N01 |
 | Reports | 2 / 9 | `tests/core/reports.spec.ts` | TC-RP-001, TC-RP-003 |
 | Delegate Login & Profile | 4 / 11 | `tests/core/delegate-login.spec.ts` | TC-DL-001, TC-DL-N01, TC-DL-N02, TC-DL-N03 |
-| **Core Functional total** | **33 / 160** | | |
-| Concurrency & Race Conditions | 0 / 33 | — not yet automated | |
+| Settings (toggle gap coverage) | 3 automated + 3 skipped / 6 | `tests/core/meeting-settings.spec.ts` | TC-SG-003, TC-SG-004, TC-SG-005 (TC-SG-001/002/006 skipped, documented reason in-file) |
+| **Core Functional total** | **36 / 160** | | |
+| Concurrency & Race Conditions | 10 / 33 | `tests/core/concurrency.spec.ts` | TC-CC-001, TC-CC-008, TC-CC-003, TC-CE-011, TC-CE-008, TC-CE-001, TC-CR-001, TC-CR-004, TC-CR-002, TC-CE-009 |
 | Settings - Account Danger Zone | 0 / 5 | — not yet automated | |
 | Meeting Request Lifecycle | 0 / 8 | — not yet automated | |
 | Notifications & UX Consistency | 0 / 6 | — not yet automated | |
 | Sponsors - Request Handling | 0 / 4 | — not yet automated | |
 | Authentication - Gap Coverage | 7 / 7 | `tests/core/authentication.spec.ts` | TC-LS-014a, TC-LS-014b, TC-SA-001, TC-SA-N01, TC-LS-009, TC-LS-013, TC-LS-012+TC-LS-004 |
-| **Grand total** | **40 / 223** | | |
+| **Grand total** | **53 / 223** | | |
+
+### Concurrency & Login/Session — last live execution: 2026-08-15
+
+**Authentication (`authentication.spec.ts`): 7/7 passed.** Clean run, no issues.
+
+**Concurrency (`concurrency.spec.ts`): 6/10 passed, 4 failed.** The 4 failures are consistent
+with the non-idempotency this file's header docstring already warns about, not new product
+bugs: TC-CC-001, TC-CC-008 and TC-CC-003 all timed out waiting for a "Book" button on a
+specific timeslot (10:20/10:40/12:20 on the shared Booking Test Event) — those exact slots
+were already consumed by the prior 2026-08-13 run and never freed, so the button these tests
+look for is no longer there. TC-CR-004 (SLOT 14:20) failed its `bothCrashed` assertion the
+same way, most likely for the same underlying reason (fixture state left over from
+2026-08-13, not a fresh regression). **Action item before the next run:** pick fresh
+unconsumed slots (or reset the Booking Test Event fixture) for these 4 cases so the next
+execution gives a clean pass/fail signal instead of a stale-state false negative. Full
+per-test detail: `../One2One_Meet_Concurrency_LoginSession_ExecutionResults_2026-08-15.xlsx`.
 
 **Authentication - Gap Coverage is not part of the original 216-case register** — these 7 TC-IDs
 were found by live-surfing staging on 2026-08-11 (see `recon/2026-08-11-auth-and-module-sweep/`)

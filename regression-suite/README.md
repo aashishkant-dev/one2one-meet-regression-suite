@@ -117,11 +117,13 @@ REGRESSION_LOG.md            # committed, generated - human-readable run history
 
 ## Known limitations of this smoke tier
 
-- **Concurrency & Race Conditions (33 cases)** and several **Danger Zone** cases are not
-  automated here — genuine concurrent-request testing needs either parallel API calls
-  (`Promise.all` against the REST endpoints directly, bypassing UI click latency) or a load
-  tool, not plain sequential Playwright clicks. `../../KNOWLEDGE.md` already has the specific
-  settings/endpoints each case needs; this is the natural next tier to build, not an oversight.
+- **Concurrency & Race Conditions**: 10/33 cases are automated in `tests/core/concurrency.spec.ts`,
+  driving two real independent browser contexts in parallel via `Promise.all`/`Promise.allSettled`
+  so the requests genuinely overlap on the wire (not sequential UI clicks). Last live run
+  2026-08-15: 6/10 passed; the 4 failures trace to stale non-idempotent fixture state from the
+  prior run, not new bugs — see `CASE_MAP.md` for detail. The remaining 23 cases and several
+  **Danger Zone** cases are still not automated — `../../KNOWLEDGE.md` has the specific
+  settings/endpoints each needs; this is the natural next tier to build, not an oversight.
 - **UX Trace (18 cases)** — full-trace assertions across every surface (bell notification,
   Meeting Details, organizer Live Meetings, organizer Delegate Meetings) for a single booking
   event. Not yet automated; `TC-MRL-01` in the register is the best starting point.

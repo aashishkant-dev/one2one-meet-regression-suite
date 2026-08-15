@@ -1,0 +1,173 @@
+{
+  "runs": [
+    {
+      "timestamp": "2026-08-15T04:03:17.361Z",
+      "gitSha": "d651bbb",
+      "summary": {
+        "total": 17,
+        "passed": 13,
+        "failed": 4,
+        "skipped": 0,
+        "other": 0
+      },
+      "newFailures": [],
+      "newFixes": [],
+      "rows": [
+        {
+          "tcIds": [
+            "TC-LS-014"
+          ],
+          "title": "TC-LS-014a unauthenticated direct access to /organizer/dashboard redirects to login",
+          "file": "authentication.spec.ts",
+          "module": "Authentication - Gap Coverage",
+          "status": "passed"
+        },
+        {
+          "tcIds": [
+            "TC-LS-014"
+          ],
+          "title": "TC-LS-014b unauthenticated direct access to /super-admin/dashboard redirects to login",
+          "file": "authentication.spec.ts",
+          "module": "Authentication - Gap Coverage",
+          "status": "passed"
+        },
+        {
+          "tcIds": [
+            "TC-SA-001"
+          ],
+          "title": "TC-SA-001 Super Admin logs in with valid credentials",
+          "file": "authentication.spec.ts",
+          "module": "Authentication - Gap Coverage",
+          "status": "passed"
+        },
+        {
+          "tcIds": [
+            "TC-SA-N01"
+          ],
+          "title": "TC-SA-N01 Super Admin login fails with an invalid password",
+          "file": "authentication.spec.ts",
+          "module": "Authentication - Gap Coverage",
+          "status": "passed"
+        },
+        {
+          "tcIds": [
+            "TC-LS-009"
+          ],
+          "title": "TC-LS-009 Forgot Password reveals username validity via a distinct error message",
+          "file": "authentication.spec.ts",
+          "module": "Authentication - Gap Coverage",
+          "status": "passed"
+        },
+        {
+          "tcIds": [
+            "TC-LS-013"
+          ],
+          "title": "TC-LS-013 manual-bookings topbar hydration on a cold direct deep-link",
+          "file": "authentication.spec.ts",
+          "module": "Authentication - Gap Coverage",
+          "status": "passed"
+        },
+        {
+          "tcIds": [
+            "TC-LS-012",
+            "TC-LS-004"
+          ],
+          "title": "TC-LS-012 + TC-LS-004 session token portability and cross-context logout invalidation",
+          "file": "authentication.spec.ts",
+          "module": "Authentication - Gap Coverage",
+          "status": "passed"
+        },
+        {
+          "tcIds": [
+            "TC-CC-001"
+          ],
+          "title": "TC-CC-001 two delegates simultaneously request the SAME target for the SAME slot",
+          "file": "concurrency.spec.ts",
+          "module": "Concurrency - Race Conditions",
+          "status": "failed"
+        },
+        {
+          "tcIds": [
+            "TC-CC-008"
+          ],
+          "title": "TC-CC-008 independent non-conflicting bookings fired at the same instant do not cross-contaminate",
+          "file": "concurrency.spec.ts",
+          "module": "Concurrency - Race Conditions",
+          "status": "failed"
+        },
+        {
+          "tcIds": [
+            "TC-CE-011"
+          ],
+          "title": "TC-CE-011 bulk \"Activate All\" and an individual delegate Status toggle fired at the same instant",
+          "file": "concurrency.spec.ts",
+          "module": "Concurrency - Race Conditions",
+          "status": "passed"
+        },
+        {
+          "tcIds": [
+            "TC-CE-008"
+          ],
+          "title": "TC-CE-008 two admin sessions simultaneously create a Sponsor Category with the IDENTICAL name",
+          "file": "concurrency.spec.ts",
+          "module": "Concurrency - Race Conditions",
+          "status": "passed"
+        },
+        {
+          "tcIds": [
+            "TC-CC-003"
+          ],
+          "title": "TC-CC-003 the losing delegate can still book a DIFFERENT open slot with the same target right after losing a race",
+          "file": "concurrency.spec.ts",
+          "module": "Concurrency - Race Conditions",
+          "status": "failed"
+        },
+        {
+          "tcIds": [
+            "TC-CE-001"
+          ],
+          "title": "TC-CE-001 two organizer sessions simultaneously create an event with the IDENTICAL name (slug collision)",
+          "file": "concurrency.spec.ts",
+          "module": "Concurrency - Race Conditions",
+          "status": "passed"
+        },
+        {
+          "tcIds": [
+            "TC-CR-001"
+          ],
+          "title": "TC-CR-001 double-click Accept on the same pending request from two open tabs of the same session",
+          "file": "concurrency.spec.ts",
+          "module": "Concurrency - Race Conditions",
+          "status": "passed"
+        },
+        {
+          "tcIds": [
+            "TC-CR-004"
+          ],
+          "title": "TC-CR-004 delegate blocks their own open slot at the exact instant another delegate requests that same slot",
+          "file": "concurrency.spec.ts",
+          "module": "Concurrency - Race Conditions",
+          "status": "failed"
+        },
+        {
+          "tcIds": [
+            "TC-CR-002"
+          ],
+          "title": "TC-CR-002 Accept vs Reject race from two open tabs of the same recipient session on the SAME pending request",
+          "file": "concurrency.spec.ts",
+          "module": "Concurrency - Race Conditions",
+          "status": "passed"
+        },
+        {
+          "tcIds": [
+            "TC-CE-009"
+          ],
+          "title": "TC-CE-009 two sessions simultaneously promote the SAME delegate to Sponsor with DIFFERENT categories",
+          "file": "concurrency.spec.ts",
+          "module": "Concurrency - Race Conditions",
+          "status": "passed"
+        }
+      ]
+    }
+  ]
+}
