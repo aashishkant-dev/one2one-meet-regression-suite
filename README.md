@@ -1,7 +1,9 @@
 # One2One Meet — QA
 
-Two Playwright projects, one shared install (npm workspaces), testing the same live staging
-app (`one2one.techarttrekkies.com.np`) at two different tiers.
+Playwright projects testing the same live staging app
+(`one2one.techarttrekkies.com.np`) at different tiers. `regression-suite` and
+`one2one-automation` share one npm-workspaces install; `concurrency-tests` is a separate,
+independently-installed project (see the note below).
 
 ```
 one2one/
@@ -10,9 +12,18 @@ one2one/
 │   ├── One2One_Meet_TestCases_Merged 8-13-2026.xlsx                 (source workbook for the register)
 │   ├── One2One_Manual_Test_Guide_2026-08-14.md                      (steps for the not-yet-automated cases)
 │   └── One2One_Meet_Concurrency_LoginSession_ExecutionResults_2026-08-15.xlsx  (latest live-run results)
-├── regression-suite/        # the full suite - 53+ TC-IDs across 22 spec files
-└── one2one-automation/      # curated 13-case post-deploy smoke suite + GitHub Actions
+├── regression-suite/        # the full suite - 53+ TC-IDs across 22 spec files (npm workspace member)
+├── one2one-automation/      # curated 13-case post-deploy smoke suite + GitHub Actions (npm workspace member)
+└── concurrency-tests/       # standalone deep-dive concurrency suite (TC-CC/TC-CR/TC-CE, own install) - see note below
 ```
+
+> **Overlap note:** `concurrency-tests/` was added independently and covers a much larger set
+> of concurrency TC-IDs (TC-CC-001–009, TC-CR-001–006, TC-CE-001–006) than
+> `regression-suite/tests/core/concurrency.spec.ts` (10 cases) or
+> `one2one-automation/tests/concurrency/` (2 cases) - all three currently exist side by side,
+> uncoordinated. Worth deciding deliberately whether `concurrency-tests/` should replace,
+> feed into, or stay separate from the other two rather than leaving three independent
+> concurrency suites to drift apart.
 
 ## Which one do I run?
 
