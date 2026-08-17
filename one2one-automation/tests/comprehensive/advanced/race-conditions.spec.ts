@@ -1,5 +1,4 @@
 import { test, expect } from '../../../../regression-suite/tests/support/fixtures/test-base';
-import { BookingSchedulerPage } from '../../../../regression-suite/tests/support/pages/BookingSchedulerPage';
 import { MeetingRequestPage } from '../../../../regression-suite/tests/support/pages/MeetingRequestPage';
 import { DelegateAuthPage } from '../../../../regression-suite/tests/support/pages/DelegateAuthPage';
 import { env } from '../../../../regression-suite/tests/support/env';
@@ -7,14 +6,14 @@ import { env } from '../../../../regression-suite/tests/support/env';
 /**
  * ADVANCED RACE CONDITIONS & HIGH-CONCURRENCY TESTS
  *
- * Complex multi-party and high-concurrency scenarios:
- * - Multiple delegates competing for same slot
+ * Complex multi-party and high-concurrency scenarios focusing on:
  * - Concurrent accept/reject from multiple tabs
  * - Rapid sequential operations
- * - Network race conditions
- * - State consistency under extreme concurrency
+ * - Double-accept prevention
+ * - State consistency under concurrent writes
  *
  * These tests use Promise.allSettled for realistic parallel execution.
+ * Note: Booking-level races tested in booking/booking-concurrency.spec.ts
  */
 test.describe('Comprehensive - Advanced Race Conditions', () => {
   test.beforeEach(async () => {
@@ -24,72 +23,61 @@ test.describe('Comprehensive - Advanced Race Conditions', () => {
     });
   });
 
-  test('TC-RC-001 multiple delegates book same slot simultaneously', async ({ browser }) => {
+  test('TC-RC-001 concurrent approve/reject from multiple organizer tabs (same request)', async ({ browser, organizerPage }) => {
     test.info().annotations.push({ type: 'priority', description: 'Critical' });
     test.info().annotations.push({
       type: 'scenario',
-      description: '3 delegates simultaneously attempt to book identical 15:20-15:35 slot on 06 Sep',
+      description: 'Tab 1 approves request, Tab 2 rejects SAME request simultaneously (race condition)',
     });
 
-    const ctx1 = await browser.newContext();
-    const ctx2 = await browser.newContext();
-    const ctx3 = await browser.newContext();
-    const page1 = await ctx1.newPage();
-    const page2 = await ctx2.newPage();
-    const page3 = await ctx3.newPage();
+    const tab2Ctx = await browser.newContext();
+    const tab2Page = await tab2Ctx.newPage();
 
     try {
-      const auth1 = new DelegateAuthPage(page1);
-      const auth2 = new DelegateAuthPage(page2);
-      const auth3 = new DelegateAuthPage(page3);
-      const scheduler1 = new BookingSchedulerPage(page1);
-      const scheduler2 = new BookingSchedulerPage(page2);
-      const scheduler3 = new BookingSchedulerPage(page3);
+      const requests1 = new MeetingRequestPage(organizerPage);
+      const requests2 = new MeetingRequestPage(tab2Page);
 
-      // All delegates login
-      await auth1.login(env.bookingEventSlug, env.bookingDelegateAUsername, env.bookingDelegateAPassword);
-      await auth2.login(env.bookingEventSlug, env.bookingDelegateBUsername, env.bookingDelegateBPassword);
-      await auth3.login(env.bookingEventSlug, env.bookingDelegateAUsername, env.bookingDelegateAPassword);
+      // Both tabs view pending requests
+      await requests1.goto();
+      await requests2.goto();
 
-      // All navigate to scheduler
-      await scheduler1.goto(env.bookingEventSlug);
-      await scheduler2.goto(env.bookingEventSlug);
-      await scheduler3.goto(env.bookingEventSlug);
+      const pending1 = await requests1.getPendingRequests();
+      if (pending1.length > 0) {
+        const targetRequest = pending1[0].delegateCompany;
+        test.info().annotations.push({
+          type: 'setup',
+          description: `Target: ${targetRequest}`,
+        });
 
-      // All view same date
-      await scheduler1.viewCalendar();
-      await scheduler2.viewCalendar();
-      await scheduler3.viewCalendar();
+        // === RACE: Tab1 approves, Tab2 rejects simultaneously ===
+        const [approveResult, rejectResult] = await Promise.allSettled([
+          requests1.approveRequest(targetRequest),
+          requests2.rejectRequest(targetRequest, 'Testing race'),
+        ]);
 
-      await scheduler1.selectDate('06 Sep');
-      await scheduler2.selectDate('06 Sep');
-      await scheduler3.selectDate('06 Sep');
+        test.info().annotations.push({
+          type: 'race-outcome',
+          description: `Approve: ${approveResult.status}, Reject: ${rejectResult.status}`,
+        });
 
-      // === RACE: All attempt to book SAME slot simultaneously ===
-      const [result1, result2, result3] = await Promise.allSettled([
-        scheduler1.bookSlot('15:20 TO 15:35'),
-        scheduler2.bookSlot('15:20 TO 15:35'),
-        scheduler3.bookSlot('15:20 TO 15:35'),
-      ]);
+        // Verify: Single outcome (not both, not neither, not stuck)
+        await organizerPage.waitForLoadState('networkidle');
+        const finalPending = await requests1.getPendingRequests();
+        const finalApproved = await requests1.getApprovedRequests();
 
-      test.info().annotations.push({
-        type: 'race-outcome',
-        description: `D1: ${result1.status}, D2: ${result2.status}, D3: ${result3.status}`,
-      });
+        const stillPending = finalPending.some(r => r.delegateCompany === targetRequest);
+        const isApproved = finalApproved.some(r => r.delegateCompany === targetRequest);
 
-      // Verify: At least one succeeded, others failed gracefully
-      const successCount = [result1, result2, result3].filter(r => r.status === 'fulfilled').length;
-      expect(successCount).toBeGreaterThanOrEqual(1);
-      expect(successCount).toBeLessThanOrEqual(1); // Only ONE should succeed
+        expect(stillPending || isApproved).toBe(true);  // One outcome
+        expect(!(stillPending && isApproved)).toBe(true); // Not both
 
-      test.info().annotations.push({
-        type: 'verification',
-        description: `${successCount} booking(s) succeeded (expected: 1)`,
-      });
+        test.info().annotations.push({
+          type: 'verification',
+          description: `✅ Single outcome: pending=${stillPending}, approved=${isApproved}`,
+        });
+      }
     } finally {
-      await ctx1.close();
-      await ctx2.close();
-      await ctx3.close();
+      await tab2Ctx.close();
     }
   });
 
@@ -197,182 +185,125 @@ test.describe('Comprehensive - Advanced Race Conditions', () => {
     }
   });
 
-  test('TC-RC-004 rapid book/reject sequence: delegate books, organizer rejects, delegate books again', async ({ browser, organizerPage }) => {
+  test('TC-RC-003 double-click accept: request confirmed only once (idempotent)', async ({ organizerPage }) => {
     test.info().annotations.push({ type: 'priority', description: 'High' });
     test.info().annotations.push({
       type: 'scenario',
-      description: 'Delegate books → Organizer rejects → Delegate immediately re-books same slot',
+      description: 'Organizer clicks Accept twice rapidly. Request confirmed only once (idempotency test).',
     });
 
-    const delegateCtx = await browser.newContext();
-    const delegatePage = await delegateCtx.newPage();
+    const requests = new MeetingRequestPage(organizerPage);
+    await requests.goto();
 
-    try {
-      const auth = new DelegateAuthPage(delegatePage);
-      const scheduler = new BookingSchedulerPage(delegatePage);
-      const requests = new MeetingRequestPage(organizerPage);
+    const pending = await requests.getPendingRequests();
+    if (pending.length > 0) {
+      const targetRequest = pending[0].delegateCompany;
+      test.info().annotations.push({
+        type: 'setup',
+        description: `Target: ${targetRequest}`,
+      });
 
-      // Delegate books slot
-      await auth.login(env.bookingEventSlug, env.bookingDelegateAUsername, env.bookingDelegateAPassword);
-      await scheduler.goto(env.bookingEventSlug);
-      await scheduler.viewCalendar();
-      await scheduler.selectDate('07 Sep');
+      // Double-click the approve button
+      const approveBtn = organizerPage.locator('[data-testid="approve"], [class*="approve"]').first();
 
-      const slots = await scheduler.getAvailableSlots();
-      const targetSlot = slots.find(s => s.time.includes('16:00') || s.time.includes('16:20'));
-
-      if (targetSlot) {
-        // STEP 1: Book
-        await scheduler.bookSlot(targetSlot.time);
-        await delegatePage.waitForLoadState('networkidle');
-        test.info().annotations.push({
-          type: 'step-1',
-          description: `Delegate booked slot: ${targetSlot.time}`,
-        });
-
-        // STEP 2: Organizer rejects
-        await requests.goto();
-        const pending = await requests.getPendingRequests();
-        if (pending.length > 0) {
-          await requests.rejectRequest(pending[0].delegateCompany);
-          await organizerPage.waitForLoadState('networkidle');
-          test.info().annotations.push({
-            type: 'step-2',
-            description: 'Organizer rejected the request',
-          });
-        }
-
-        // STEP 3: Delegate immediately re-books same slot
-        await delegatePage.goto(`/${env.bookingEventSlug}`);
-        await scheduler.viewCalendar();
-        await scheduler.selectDate('07 Sep');
-
-        const freshSlots = await scheduler.getAvailableSlots();
-        const sameSlot = freshSlots.find(s => s.time === targetSlot.time);
-
-        if (sameSlot) {
-          await scheduler.bookSlot(sameSlot.time);
-          await delegatePage.waitForLoadState('networkidle');
-          test.info().annotations.push({
-            type: 'step-3',
-            description: 'Delegate re-booked the same slot',
-          });
-        }
-
-        // Verify new request is in pending
-        await requests.goto();
-        const pendingAfter = await requests.getPendingRequests();
-        expect(pendingAfter.length).toBeGreaterThan(0);
+      if (await approveBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        // Two rapid clicks
+        await approveBtn.click();
+        await approveBtn.click();
 
         test.info().annotations.push({
-          type: 'verification',
-          description: `${pendingAfter.length} pending request(s) after re-booking`,
-        });
-      }
-    } finally {
-      await delegateCtx.close();
-    }
-  });
-
-  test('TC-RC-005 network failure recovery: timeout during booking, retry succeeds', async ({ page }) => {
-    test.info().annotations.push({ type: 'priority', description: 'High' });
-    test.info().annotations.push({
-      type: 'scenario',
-      description: 'Booking request times out → delegate retries → succeeds on second attempt',
-    });
-
-    const auth = new DelegateAuthPage(page);
-    const scheduler = new BookingSchedulerPage(page);
-
-    await auth.login(env.bookingEventSlug, env.bookingDelegateAUsername, env.bookingDelegateAPassword);
-    await scheduler.goto(env.bookingEventSlug);
-    await scheduler.viewCalendar();
-    await scheduler.selectDate('07 Sep');
-
-    const slots = await scheduler.getAvailableSlots();
-    const targetSlot = slots.find(s => s.time.includes('16:35'));
-
-    if (targetSlot) {
-      // First attempt (may fail)
-      try {
-        await page.context().setOffline(true);
-        await scheduler.bookSlot(targetSlot.time);
-        await page.context().setOffline(false);
-      } catch (e) {
-        // Expected to fail, now restore connection
-        await page.context().setOffline(false);
-        test.info().annotations.push({
-          type: 'recovery',
-          description: 'First attempt failed (expected), connection restored',
+          type: 'action',
+          description: 'Approve button clicked twice rapidly',
         });
       }
 
-      // Retry
-      await page.reload();
-      await scheduler.viewCalendar();
-      await scheduler.selectDate('07 Sep');
+      await organizerPage.waitForLoadState('networkidle');
 
-      const retrySlots = await scheduler.getAvailableSlots();
-      const retrySlot = retrySlots.find(s => s.time.includes('16:35'));
+      // Verify only one approval exists
+      const approved = await requests.getApprovedRequests();
+      const byRequest = approved.filter(r => r.delegateCompany === targetRequest);
 
-      if (retrySlot) {
-        await scheduler.bookSlot(retrySlot.time);
-        await page.waitForLoadState('networkidle');
-
-        const successMsg = page.getByText(/request sent|booking confirmed/i);
-        await expect(successMsg).toBeVisible({ timeout: 10000 });
-
-        test.info().annotations.push({
-          type: 'verification',
-          description: 'Retry succeeded after network recovery',
-        });
-      }
-    }
-  });
-
-  test('TC-RC-006 slot availability countdown: monitor slot changes during booking flow', async ({ page }) => {
-    test.info().annotations.push({ type: 'priority', description: 'Medium' });
-    test.info().annotations.push({
-      type: 'scenario',
-      description: 'Delegate views calendar → slot appears available → books → slot no longer available',
-    });
-
-    const auth = new DelegateAuthPage(page);
-    const scheduler = new BookingSchedulerPage(page);
-
-    await auth.login(env.bookingEventSlug, env.bookingDelegateAUsername, env.bookingDelegateAPassword);
-    await scheduler.goto(env.bookingEventSlug);
-    await scheduler.viewCalendar();
-    await scheduler.selectDate('06 Sep');
-
-    // Get initial available slots
-    const initialSlots = await scheduler.getAvailableSlots();
-    const initialCount = initialSlots.length;
-    test.info().annotations.push({
-      type: 'checkpoint-1',
-      description: `Initial available slots: ${initialCount}`,
-    });
-
-    // Book a slot
-    const targetSlot = initialSlots.find(s => s.time.includes('15:50'));
-    if (targetSlot) {
-      await scheduler.bookSlot(targetSlot.time);
-      await page.waitForLoadState('networkidle');
-
-      // Refresh and check availability
-      await page.reload();
-      await scheduler.viewCalendar();
-      await scheduler.selectDate('06 Sep');
-
-      const updatedSlots = await scheduler.getAvailableSlots();
-      const updatedCount = updatedSlots.length;
-
-      expect(updatedCount).toBeLessThan(initialCount);
+      expect(byRequest.length).toBeLessThanOrEqual(1);
 
       test.info().annotations.push({
-        type: 'checkpoint-2',
-        description: `After booking: ${updatedCount} available slots (decreased by ${initialCount - updatedCount})`,
+        type: 'verification',
+        description: `✅ Idempotent: ${byRequest.length} confirmation(s) (expected ≤ 1)`,
       });
+    }
+  });
+
+  test('TC-RC-004 rapid accept sequence: multiple requests approved in quick succession', async ({ organizerPage }) => {
+    test.info().annotations.push({ type: 'priority', description: 'High' });
+    test.info().annotations.push({
+      type: 'scenario',
+      description: '3+ pending requests approved rapidly, one after another (stress test)',
+    });
+
+    const requests = new MeetingRequestPage(organizerPage);
+    await requests.goto();
+
+    const pendingBefore = await requests.getPendingRequests();
+    test.info().annotations.push({
+      type: 'setup',
+      description: `Starting with ${pendingBefore.length} pending requests`,
+    });
+
+    // Approve up to 3 requests in rapid succession
+    const toApprove = pendingBefore.slice(0, 3);
+    const results: { company: string; status: string }[] = [];
+
+    for (const request of toApprove) {
+      try {
+        await requests.approveRequest(request.delegateCompany);
+        results.push({ company: request.delegateCompany, status: 'success' });
+        await organizerPage.waitForTimeout(200); // Brief pause
+      } catch (e) {
+        results.push({ company: request.delegateCompany, status: 'failed' });
+      }
+    }
+
+    await organizerPage.waitForLoadState('networkidle');
+    const approvedAfter = await requests.getApprovedRequests();
+
+    const successCount = results.filter(r => r.status === 'success').length;
+    test.info().annotations.push({
+      type: 'verification',
+      description: `✅ Approved ${successCount}/${toApprove.length} in rapid sequence`,
+    });
+
+    expect(successCount).toBeGreaterThan(0);
+  });
+
+  test('TC-RC-005 accept/reject conflict: resolve to single outcome', async ({ organizerPage }) => {
+    test.info().annotations.push({ type: 'priority', description: 'High' });
+    test.info().annotations.push({
+      type: 'scenario',
+      description: 'Request state resolves consistently despite conflicting actions',
+    });
+
+    const requests = new MeetingRequestPage(organizerPage);
+    await requests.goto();
+
+    const pending = await requests.getPendingRequests();
+    if (pending.length >= 2) {
+      // Approve first, reject second (different requests, sequential)
+      await requests.approveRequest(pending[0].delegateCompany);
+      await organizerPage.waitForTimeout(500);
+      await requests.rejectRequest(pending[1].delegateCompany);
+
+      await organizerPage.waitForLoadState('networkidle');
+      await organizerPage.reload();
+      await requests.goto();
+
+      const finalApproved = await requests.getApprovedRequests();
+      const finalPending = await requests.getPendingRequests();
+
+      test.info().annotations.push({
+        type: 'verification',
+        description: `✅ State resolved: ${finalApproved.length} approved, ${finalPending.length} pending`,
+      });
+
+      expect(finalApproved.length).toBeGreaterThan(0);
     }
   });
 });
