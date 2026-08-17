@@ -10,7 +10,10 @@
     "report": "playwright show-report",
     "test:auth": "playwright test tests/auth",
     "test:core-crud": "playwright test tests/core-crud",
-    "test:concurrency": "playwright test tests/concurrency"
+    "test:concurrency": "playwright test tests/concurrency",
+    "test:booking": "playwright test tests/booking",
+    "test:meeting-request": "playwright test tests/meeting-request",
+    "test:event-state": "playwright test tests/event-state"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",
