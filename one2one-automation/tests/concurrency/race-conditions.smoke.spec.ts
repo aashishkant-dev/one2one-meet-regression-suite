@@ -28,96 +28,120 @@ test.describe('Smoke - Concurrency', () => {
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
 
-    const navA = new OrganizerNav(pageA);
-    const navB = new OrganizerNav(pageB);
-    await navA.login(env.orgUsername, env.orgPassword);
-    await navB.login(env.orgUsername, env.orgPassword);
+    try {
+      const navA = new OrganizerNav(pageA);
+      const navB = new OrganizerNav(pageB);
+      await navA.login(env.orgUsername, env.orgPassword);
+      await navB.login(env.orgUsername, env.orgPassword);
 
-    const eventsA = new EventsPage(pageA);
-    const eventsB = new EventsPage(pageB);
-    await eventsA.goto();
-    await eventsB.goto();
+      const eventsA = new EventsPage(pageA);
+      const eventsB = new EventsPage(pageB);
+      await eventsA.goto();
+      await eventsB.goto();
 
-    const raceName = `SmokeConcurrencyEvent-${Date.now()}`;
-    const input = {
-      name: raceName,
-      timezone: 'Kathmandu',
-      venue: 'Race Test Venue',
-      address: 'Race Test Address',
-      country: 'Nepal',
-      city: 'Kathmandu',
-      email: `race-${Date.now()}@example.com`,
-      contactNumber: '+9779800000000',
-    };
+      const raceName = `SmokeConcurrencyEvent-${Date.now()}`;
+      const input = {
+        name: raceName,
+        timezone: 'Kathmandu',
+        venue: 'Race Test Venue',
+        address: 'Race Test Address',
+        country: 'Nepal',
+        city: 'Kathmandu',
+        email: `race-${Date.now()}@example.com`,
+        contactNumber: '+9779800000000',
+      };
 
-    const [resultA, resultB] = await Promise.allSettled([
-      eventsA.createEvent(input),
-      eventsB.createEvent(input),
-    ]);
-    await pageA.waitForTimeout(5000);
-    const laterBtnA = pageA.getByRole('button', { name: /^later$/i });
-    if (await laterBtnA.isVisible({ timeout: 3000 }).catch(() => false)) await laterBtnA.click();
-    const laterBtnB = pageB.getByRole('button', { name: /^later$/i });
-    if (await laterBtnB.isVisible({ timeout: 3000 }).catch(() => false)) await laterBtnB.click();
+      const [resultA, resultB] = await Promise.allSettled([
+        eventsA.createEvent(input),
+        eventsB.createEvent(input),
+      ]);
 
-    await eventsA.goto();
-    await eventsA.searchByName(raceName);
-    await pageA.waitForTimeout(1500);
+      // Dismiss post-create modals if visible (either or both sessions may show one)
+      const laterBtnA = pageA.getByRole('button', { name: /^later$/i });
+      const laterBtnB = pageB.getByRole('button', { name: /^later$/i });
 
-    test.info().annotations.push({
-      type: 'observed-outcome',
-      description: `Session A: ${resultA.status}. Session B: ${resultB.status}.`,
-    });
+      if (await laterBtnA.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await laterBtnA.click();
+      }
+      if (await laterBtnB.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await laterBtnB.click();
+      }
 
-    // Neither concurrent session should be left crashed/rejected.
-    const eitherSucceeded = resultA.status === 'fulfilled' || resultB.status === 'fulfilled';
-    expect(eitherSucceeded).toBe(true);
+      // Wait for one of the sessions to navigate away from the form
+      await Promise.race([
+        pageA.waitForURL(/\/organizer\/events/, { timeout: 10_000 }),
+        pageB.waitForURL(/\/organizer\/events/, { timeout: 10_000 }),
+      ]).catch(() => {
+        // If neither navigates, events list may be stuck; proceed to verification
+      });
 
-    await ctxA.close();
-    await ctxB.close();
+      // Verify the race condition was handled correctly
+      await eventsA.goto();
+      await eventsA.searchByName(raceName);
+      await pageA.waitForLoadState('networkidle');
+
+      test.info().annotations.push({
+        type: 'observed-outcome',
+        description: `Session A: ${resultA.status}. Session B: ${resultB.status}.`,
+      });
+
+      // Neither concurrent session should be left crashed/rejected.
+      const eitherSucceeded = resultA.status === 'fulfilled' || resultB.status === 'fulfilled';
+      expect(eitherSucceeded).toBe(true);
+    } finally {
+      await ctxA.close();
+      await ctxB.close();
+    }
   });
 
-  test('TC-CE-008 two admin sessions simultaneously create a Sponsor Category with the IDENTICAL name', async ({ browser }) => {
+  test('TC-CE-008 two organizer sessions simultaneously create a Sponsor Category with the IDENTICAL name', async ({ browser }) => {
     test.info().annotations.push({ type: 'priority', description: 'High' });
     const ctxA = await browser.newContext();
     const ctxB = await browser.newContext();
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
 
-    const navA = new OrganizerNav(pageA);
-    const navB = new OrganizerNav(pageB);
-    await navA.login(env.orgUsername, env.orgPassword);
-    await navB.login(env.orgUsername, env.orgPassword);
-    await navA.switchEventAndWaitFor(seededData.currentEvent.name, /Sponsor/i);
-    await navB.switchEventAndWaitFor(seededData.currentEvent.name, /Sponsor/i);
+    try {
+      const navA = new OrganizerNav(pageA);
+      const navB = new OrganizerNav(pageB);
+      await navA.login(env.orgUsername, env.orgPassword);
+      await navB.login(env.orgUsername, env.orgPassword);
+      await navA.switchEventAndWaitFor(seededData.currentEvent.name, /Sponsor/i);
+      await navB.switchEventAndWaitFor(seededData.currentEvent.name, /Sponsor/i);
 
-    const categoriesA = new SponsorCategoriesPage(pageA);
-    const categoriesB = new SponsorCategoriesPage(pageB);
-    await categoriesA.goto();
-    await categoriesB.goto();
+      const categoriesA = new SponsorCategoriesPage(pageA);
+      const categoriesB = new SponsorCategoriesPage(pageB);
+      await categoriesA.goto();
+      await categoriesB.goto();
 
-    const raceName = `SmokeConcurrencyRace-${Date.now()}`;
-    await categoriesA.openAddForm();
-    await categoriesA.fillName(raceName);
-    await categoriesB.openAddForm();
-    await categoriesB.fillName(raceName);
+      const raceName = `SmokeConcurrencyRace-${Date.now()}`;
+      await categoriesA.openAddForm();
+      await categoriesA.fillName(raceName);
+      await categoriesB.openAddForm();
+      await categoriesB.fillName(raceName);
 
-    const [resultA, resultB] = await Promise.allSettled([categoriesA.save(), categoriesB.save()]);
+      const [resultA, resultB] = await Promise.allSettled([
+        categoriesA.save(),
+        categoriesB.save(),
+      ]);
 
-    await pageA.waitForTimeout(2000);
-    await pageA.reload();
-    await pageA.waitForTimeout(1500);
-    const finalCount = await categoriesA.countRowsNamed(raceName);
+      // Wait for save operations to complete and settle
+      await pageA.waitForLoadState('networkidle');
+      await pageA.reload();
+      await pageA.waitForLoadState('domcontentloaded');
 
-    test.info().annotations.push({
-      type: 'observed-outcome',
-      description: `Session A: ${resultA.status}. Session B: ${resultB.status}. Rows named "${raceName}": ${finalCount}.`,
-    });
+      const finalCount = await categoriesA.countRowsNamed(raceName);
 
-    // Duplicate-name de-dup must hold under a genuine simultaneous race.
-    expect(finalCount).toBeLessThanOrEqual(1);
+      test.info().annotations.push({
+        type: 'observed-outcome',
+        description: `Session A: ${resultA.status}. Session B: ${resultB.status}. Rows named "${raceName}": ${finalCount}.`,
+      });
 
-    await ctxA.close();
-    await ctxB.close();
+      // Duplicate-name de-dup must hold under a genuine simultaneous race.
+      expect(finalCount).toBeLessThanOrEqual(1);
+    } finally {
+      await ctxA.close();
+      await ctxB.close();
+    }
   });
 });

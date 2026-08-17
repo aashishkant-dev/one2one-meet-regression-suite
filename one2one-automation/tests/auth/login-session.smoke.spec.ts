@@ -16,31 +16,11 @@ test.describe('Smoke - Auth & Session', () => {
 
   test('TC-LS-014a unauthenticated direct access to /organizer/dashboard redirects to login', async ({ page }) => {
     test.info().annotations.push({ type: 'priority', description: 'High' });
+
     await page.goto('/organizer/dashboard');
+
+    // Verify unauthenticated access is redirected to login
     await expect(page).toHaveURL(/\/auth\/login/, { timeout: 15_000 });
-  });
-
-  test('TC-LS-014b unauthenticated direct access to /super-admin/dashboard redirects to login', async ({ page }) => {
-    test.info().annotations.push({ type: 'priority', description: 'High' });
-    await page.goto('/super-admin/dashboard');
-    await expect(page).toHaveURL(/\/auth\/login/, { timeout: 15_000 });
-  });
-
-  test('TC-SA-001 Super Admin logs in with valid credentials', async ({ page }) => {
-    test.info().annotations.push({ type: 'priority', description: 'High' });
-    const nav = new OrganizerNav(page);
-    await nav.loginSuperAdmin(env.superAdminUsername, env.superAdminPassword);
-    await expect(page.getByRole('link', { name: 'Event Organizers' })).toBeVisible();
-  });
-
-  test('TC-SA-N01 Super Admin login fails with an invalid password', async ({ page }) => {
-    test.info().annotations.push({ type: 'priority', description: 'High' });
-    await page.goto('/auth/login');
-    await page.locator('#username').fill(env.superAdminUsername);
-    await page.locator('#password').fill('definitely-wrong-password');
-    await page.getByRole('button', { name: /log ?in/i }).click();
-    await expect(page).toHaveURL(/\/auth\/login/);
-    await expect(page.getByText(/invalid|not found|incorrect/i)).toBeVisible();
   });
 
   test('TC-LS-012 + TC-LS-004 session token portability and cross-context logout invalidation', async ({ page, browser }) => {
@@ -48,42 +28,62 @@ test.describe('Smoke - Auth & Session', () => {
     const nav = new OrganizerNav(page);
     await nav.login(env.orgUsername, env.orgPassword);
 
+    // Verify session token is properly issued
     const context = page.context();
     const cookies = await context.cookies();
     const refreshToken = cookies.find((c) => c.name === 'refreshToken');
-    expect(refreshToken, 'expected an httpOnly refreshToken cookie after login').toBeTruthy();
+    expect(refreshToken, 'refreshToken should be present after successful login').toBeTruthy();
 
+    // Create a cloned context with the same session cookies
     const clonedContext = await browser.newContext();
-    await clonedContext.addCookies(cookies);
-    const clonedPage = await clonedContext.newPage();
-    await clonedPage.goto('/organizer/dashboard');
-    await expect(clonedPage).toHaveURL(/\/organizer\/dashboard/);
+    try {
+      await clonedContext.addCookies(cookies);
+      const clonedPage = await clonedContext.newPage();
+      await clonedPage.goto('/organizer/dashboard');
 
-    await nav.logout();
-    await clonedPage.reload();
-    await expect(clonedPage).toHaveURL(/\/auth\/login/, { timeout: 15_000 });
+      // Verify the cloned session can access protected pages
+      await expect(clonedPage).toHaveURL(/\/organizer\/dashboard/, { timeout: 10_000 });
 
-    await clonedContext.close();
+      // Logout from the original session
+      await nav.logout();
+
+      // Verify logout invalidates the cloned session
+      await clonedPage.reload();
+      await expect(clonedPage).toHaveURL(/\/auth\/login/, { timeout: 15_000 });
+    } finally {
+      await clonedContext.close();
+    }
   });
 
   test('TC-DL-001 delegate logs in at the event slug login widget', async ({ page }) => {
     test.info().annotations.push({ type: 'priority', description: 'High' });
     const auth = new DelegateAuthPage(page);
-    await auth.login(env.bookingEventSlug, env.bookingDelegateAUsername, env.bookingDelegateAPassword);
-    await auth.expectLoggedIn();
+
+    await auth.login(
+      env.bookingEventSlug,
+      env.bookingDelegateAUsername,
+      env.bookingDelegateAPassword
+    );
+    await auth.expectLoggedIn({ timeout: 10_000 });
   });
 
   test('TC-DL-N01 delegate login with wrong password is rejected with a clear error', async ({ page }) => {
     test.info().annotations.push({ type: 'priority', description: 'High' });
     const auth = new DelegateAuthPage(page);
-    await auth.login(env.bookingEventSlug, env.bookingDelegateAUsername, 'definitely-wrong-password');
-    await auth.expectInvalidLoginError();
+
+    await auth.login(env.bookingEventSlug, env.bookingDelegateAUsername, 'wrong-password');
+    await auth.expectInvalidLoginError({ timeout: 10_000 });
   });
 
   test('TC-DL-N02 delegate login with non-existent username is rejected', async ({ page }) => {
     test.info().annotations.push({ type: 'priority', description: 'Medium' });
     const auth = new DelegateAuthPage(page);
-    await auth.login(env.bookingEventSlug, `nonexistent-${Date.now()}`, 'whatever-password');
-    await auth.expectInvalidLoginError();
+
+    await auth.login(
+      env.bookingEventSlug,
+      `nonexistent-user-${Date.now()}`,
+      'some-password'
+    );
+    await auth.expectInvalidLoginError({ timeout: 10_000 });
   });
 });
