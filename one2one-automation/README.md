@@ -9,10 +9,12 @@ real browser, with real requests.
 **Scope:** Core smoke tests (10) + comprehensive booking/meeting workflows (28). Not the full 53+ case
 regression suite — this is the validated, production-critical subset.
 
-## Status: 38/38 passing (comprehensive, 2026-08-17)
+## Status: 42/42 passing (comprehensive + concurrency, 2026-08-17)
 
-Latest expansion adds full booking scheduler, meeting-request lifecycle, and event-state access control
-(past/current/future event gates). All tests verified against staging.
+Latest expansion adds full booking scheduler, meeting-request lifecycle, event-state access control,
+and high-concurrency meeting scenarios. All tests verified against staging.
+
+**Coverage:** 10 core smoke + 28 booking/workflow + 4 concurrent meeting tests = 42 total
 
 **Known fixed issues:**
 - 2026-08-15 UI-drift: 8 Page Object bugs fixed (renamed buttons, relabeled fields, react-select → radio buttons, locator collisions)
@@ -24,12 +26,13 @@ Latest expansion adds full booking scheduler, meeting-request lifecycle, and eve
 |---|---|---|---|
 | **Auth & Session** | 5 | `tests/auth/login-session.smoke.spec.ts` | Organizer + delegate login, session portability, logout invalidation. Foundation for all features. |
 | **Core CRUD** | 3 | `tests/core-crud/event-and-delegate.smoke.spec.ts` | Event/delegate/access-type creation. Golden-path flows most likely to break from UI changes. |
-| **Concurrency** | 2 | `tests/concurrency/race-conditions.smoke.spec.ts` | Parallel event + sponsor creation races. Safe, timestamped, re-runnable indefinitely. |
+| **Core Concurrency** | 2 | `tests/concurrency/race-conditions.smoke.spec.ts` | Parallel event + sponsor creation races. Safe, timestamped, re-runnable indefinitely. |
 | **Booking Scheduler** | 8 | `tests/booking/booking-scheduler-flow.spec.ts` | Calendar view, slot booking, blocking, request submission, double-booking prevention, email confirmation. Core delegate booking UX. |
 | **Meeting Requests** | 10 | `tests/meeting-request/organizer-meeting-management.spec.ts` | Organizer inbox, approve/reject/reschedule, meeting management, notifications. Critical organizer workflows. |
+| **Concurrent Meeting** | 4 | `tests/meeting-request/concurrent-meeting-acceptance.spec.ts` | TC-MB-003/004/005/006 — simultaneous acceptance, double-accept prevention, rapid sequences, accept-vs-reject races. High-concurrency meeting scenarios. |
 | **Event-State Access** | 10 | `tests/event-state/time-based-access-control.spec.ts` | Future/current/past event gates, booking window enforcement, read-only modes. Ensures time-based access control works. |
 
-**Total: 38 tests**, ~8 mins headless, ~15 mins headed (with browser interaction).
+**Total: 42 tests** across 7 modules, ~10 mins headless, ~18 mins headed (with browser interaction).
 
 ## Setup
 
