@@ -1,8 +1,8 @@
-import { test, expect } from '../../../regression-suite/tests/support/fixtures/test-base';
-import { BookingSchedulerPage } from '../../../regression-suite/tests/support/pages/BookingSchedulerPage';
-import { MeetingRequestPage } from '../../../regression-suite/tests/support/pages/MeetingRequestPage';
-import { DelegateAuthPage } from '../../../regression-suite/tests/support/pages/DelegateAuthPage';
-import { env } from '../../../regression-suite/tests/support/env';
+import { test, expect } from '../../../../regression-suite/tests/support/fixtures/test-base';
+import { BookingSchedulerPage } from '../../../../regression-suite/tests/support/pages/BookingSchedulerPage';
+import { MeetingRequestPage } from '../../../../regression-suite/tests/support/pages/MeetingRequestPage';
+import { DelegateAuthPage } from '../../../../regression-suite/tests/support/pages/DelegateAuthPage';
+import { env } from '../../../../regression-suite/tests/support/env';
 
 /**
  * ADVANCED RACE CONDITIONS & HIGH-CONCURRENCY TESTS

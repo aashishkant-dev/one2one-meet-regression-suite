@@ -1,7 +1,7 @@
-import { test, expect } from '../../../regression-suite/tests/support/fixtures/test-base';
-import { BookingSchedulerPage } from '../../../regression-suite/tests/support/pages/BookingSchedulerPage';
-import { DelegateAuthPage } from '../../../regression-suite/tests/support/pages/DelegateAuthPage';
-import { env } from '../../../regression-suite/tests/support/env';
+import { test, expect } from '../../../../regression-suite/tests/support/fixtures/test-base';
+import { BookingSchedulerPage } from '../../../../regression-suite/tests/support/pages/BookingSchedulerPage';
+import { DelegateAuthPage } from '../../../../regression-suite/tests/support/pages/DelegateAuthPage';
+import { env } from '../../../../regression-suite/tests/support/env';
 
 /**
  * BOOKING HAPPY PATH TESTS
