@@ -57,3 +57,4 @@ built specifically to answer "is anything obviously broken" in under 2 minutes w
 manual clicking, and safe to run as often as you want, including unattended in CI.
 `one2one-automation` imports its Page Objects directly from `regression-suite/tests/support/`,
 so a selector fix in one place fixes both.
+# One2One-Automation
